@@ -1,0 +1,17 @@
+# Build Folders
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Tt]emp/
+
+# BUT keep this specific DLL file
+!*/bin/Stock_Backend.dll
+
+# IDE and Logs
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.log
