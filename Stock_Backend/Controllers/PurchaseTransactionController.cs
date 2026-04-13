@@ -32,7 +32,7 @@ namespace Stock_Backend.Controllers
         }
 
 
-        [Route("api/PurchaseTransaction/{invoice_id}")]
+        [Route("api/PurchaseTransaction/InvoiceNo{invoice_id}")]
         [HttpGet]
         public HttpResponseMessage GetPurchaseByInvoice(int invoice_id)
         {
@@ -446,21 +446,35 @@ namespace Stock_Backend.Controllers
         }
 
 
-        [Route("api/DelPurchaseTransaction")]
         [HttpPost]
-        public HttpResponseMessage DeletePurchase([FromBody] PURCHASE_Transaction request)
+        [Route("api/DelPurchaseTransaction")]
+        public HttpResponseMessage DeletePurchase([FromBody] PURCHASE_Transaction model)
         {
             try
             {
                 db.Connect();
 
-                SqlCommand cmd = new SqlCommand("UPDATE PURCHASE SET Status = '0' WHERE Invoice_id = @Invoice_id", db.cn );
+                if (db.IsAdmin(model.Modified_by))
+                {
+                    SqlCommand cmd = new SqlCommand(
+                        "UPDATE PURCHASE SET Status = '0' WHERE Invoice_id = @Invoice_id",
+                        db.cn
+                    );
 
-                cmd.Parameters.AddWithValue("@Invoice_id", request.Invoice_id);
-                cmd.ExecuteNonQuery();
+                    cmd.Parameters.AddWithValue("@Invoice_id", model.Invoice_id);
+
+                    int rowsAffected = cmd.ExecuteNonQuery();
+
+                    db.Disconnect();
+
+                    if (rowsAffected > 0)
+                        return Request.CreateResponse(HttpStatusCode.OK, "Record Deleted");
+                    else
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Record Not Found!");
+                }
 
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.OK, "Purchase Deleted Successfully");
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User!");
             }
             catch (Exception ex)
             {
