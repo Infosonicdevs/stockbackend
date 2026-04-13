@@ -32,7 +32,7 @@ namespace Stock_Backend.Controllers
         }
 
 
-        [Route("api/PurchaseTransaction/InvoiceNo{invoice_id}")]
+        [Route("api/PurchaseTransaction/InvoiceId{invoice_id}")]
         [HttpGet]
         public HttpResponseMessage GetPurchaseByInvoice(int invoice_id)
         {

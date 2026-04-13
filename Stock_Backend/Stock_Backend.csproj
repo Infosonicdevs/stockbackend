@@ -215,6 +215,7 @@
     <Compile Include="Models\PURCHASE_Transaction.cs" />
     <Compile Include="Models\PURCHASE_DETAILS.cs" />
     <Compile Include="Models\Role_Master.cs" />
+    <Compile Include="Models\SaleTransactionModel.cs" />
     <Compile Include="Models\Sanstha_Info.cs" />
     <Compile Include="Models\State_Master.cs" />
     <Compile Include="Models\STOCK_BALANCE.cs" />

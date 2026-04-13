@@ -27,5 +27,7 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
+
+
     }
 }

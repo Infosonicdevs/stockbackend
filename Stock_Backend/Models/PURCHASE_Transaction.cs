@@ -25,7 +25,7 @@ namespace Stock_Backend.Models
         public decimal Final_amt { get; set; }
         public char Invert {  get; set; }
         public int Outlet_id { get; set; }
-        public int Invoice_no { get; set; }
+        public string Invoice_no { get; set; }
         public DateTime Bill_date { get; set; }
         public decimal Credit_note { get; set; }
         public decimal Net_disc { get; set; }
