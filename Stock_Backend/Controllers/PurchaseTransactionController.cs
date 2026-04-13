@@ -416,19 +416,15 @@ namespace Stock_Backend.Controllers
 
         [Route("api/DelPurchaseTransaction")]
         [HttpPost]
-        public HttpResponseMessage DeletePurchase(int Invoice_id, int Trans_id, string Reason)
+        public HttpResponseMessage DeletePurchase([FromBody] PURCHASE_Transaction request)
         {
             try
             {
                 db.Connect();
 
-                SqlCommand cmd = new SqlCommand("Sp_Bazar_purchase_dlt", db.cn);
-                cmd.CommandType = CommandType.StoredProcedure;
+                SqlCommand cmd = new SqlCommand("UPDATE PURCHASE SET Status = '0' WHERE Invoice_id = @Invoice_id", db.cn );
 
-                cmd.Parameters.AddWithValue("@Invoice_id", Invoice_id);
-                cmd.Parameters.AddWithValue("@Trans_id", Trans_id);
-                cmd.Parameters.AddWithValue("@Reason", Reason);
-
+                cmd.Parameters.AddWithValue("@Invoice_id", request.Invoice_id);
                 cmd.ExecuteNonQuery();
 
                 db.Disconnect();
