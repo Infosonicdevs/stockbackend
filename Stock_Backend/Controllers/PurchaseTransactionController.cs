@@ -31,6 +31,38 @@ namespace Stock_Backend.Controllers
             }
         }
 
+
+        [Route("api/PurchaseTransaction/{invoice_id}")]
+        [HttpGet]
+        public HttpResponseMessage GetPurchaseByInvoice(int invoice_id)
+        {
+            try
+            {
+                db.Connect();
+                string query = @" SELECT  p.Invoice_id, p.Invoice_date,  p.Vend_id,  pd.Stock_id, pd.Price, pd.Quantity, pd.Total, pd.CGST_amt, pd.SGST_amt, pd.IGST_amt
+            FROM PURCHASE p
+            INNER JOIN PURCHASE_DETAILS pd 
+            ON p.Invoice_id = pd.Invoice_id
+            WHERE p.Invoice_id = @Invoice_id
+            AND p.Status = '1' ";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@Invoice_id", invoice_id);
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, dt);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
         public List<BazaSetting> GetBazarSetting()
         {
             try
