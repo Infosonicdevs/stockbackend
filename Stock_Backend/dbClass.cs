@@ -15,17 +15,6 @@ namespace Stock_Backend
         SqlDataAdapter da;
 
         public SqlConnection cn;
-        int L_id;
-        DataTable dt;
-
-
-
-        public DbClass()
-        {
-
-        }
-
-
 
         public void Connect()
         {
@@ -34,14 +23,11 @@ namespace Stock_Backend
                 string constr = System.Configuration.ConfigurationManager.ConnectionStrings["Sqlcon"].ConnectionString;
                 cn = new SqlConnection(constr);
                 cn.Open();
-                
             }
             catch (Exception ex)
             {
-
                 Console.Write(ex.Message);
             }
-
         }
 
         public void Disconnect()
@@ -51,12 +37,24 @@ namespace Stock_Backend
                 cn.Close();
                 cn.Dispose();
             }
-        }
-        
+        }        
 
         public DataTable GetTable(String selectquery)
         {
             da = new SqlDataAdapter(selectquery, cn);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+            return dt;
+        }
+
+        public DataTable GetTable(String selectquery, params SqlParameter[] parameters)
+        {
+            SqlCommand cmd = new SqlCommand(selectquery, cn);
+            if (parameters != null)
+            {
+                cmd.Parameters.AddRange(parameters);
+            }
+            da = new SqlDataAdapter(cmd);
             DataTable dt = new DataTable();
             da.Fill(dt);
             return dt;
@@ -69,7 +67,6 @@ namespace Stock_Backend
 
         public bool IsAdmin(string user)
         {
-
             DataTable dt = GetTable("Select * from USER_LOGIN where User_name='" + user + "'");
 
             if (dt.Rows.Count > 0 && Convert.ToInt16(dt.Rows[0]["Role_id"]) == 1)

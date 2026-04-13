@@ -199,6 +199,91 @@ namespace Stock_Backend.Controllers
          }
 
 
+        [Route("api/StockDist")]
+        public HttpResponseMessage GetStockDist(string BatchNo)
+        {
+            try
+            {
+                db.Connect();
+                string query = @"WITH LatestRate AS (
+                                SELECT 
+                                    Stock_id,
+                                    MRP,
+                                    Discount,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY Stock_id 
+                                        ORDER BY Sequence_no DESC
+                                    ) AS rn
+                                FROM [Stock].[dbo].[STOCK_RATE]
+                            )
+
+                            SELECT 
+                                sd.*,
+                                lr.Discount AS Discount
+                            FROM 
+                                [Stock].[dbo].[STOCK_DISTRIBUTION] sd
+                            LEFT JOIN 
+                                LatestRate lr 
+                                ON sd.Stock_id = lr.Stock_id AND lr.rn = 1
+                            WHERE Batch_no = @BatchNo";
+                var result = db.GetTable(query, new SqlParameter("@BatchNo", BatchNo));
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, result);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        [Route("api/StockDistList")]
+        public HttpResponseMessage GetStockDistList()
+        {
+            try
+            {
+                db.Connect();
+                string query = @"WITH LatestRate AS (
+                                SELECT 
+                                    Stock_id,
+                                    MRP,
+                                    Discount,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY Stock_id 
+                                        ORDER BY Sequence_no DESC
+                                    ) AS rn
+                                FROM [Stock].[dbo].[STOCK_RATE]
+                            )
+
+                            SELECT 
+                                sd.Outlet_id,
+                                sd.Batch_no,
+                                CAST(sd.Date AS DATE) AS Date,
+                                SUM(sd.Quantity) AS Total_Quantity,
+                                SUM(sd.Amount) AS Total_Amount,
+                                MAX(lr.MRP) AS MRP,
+                                MAX(lr.Discount) AS Discount
+                            FROM 
+                                [Stock].[dbo].[STOCK_DISTRIBUTION] sd
+                            LEFT JOIN 
+                                LatestRate lr 
+                                ON sd.Stock_id = lr.Stock_id AND lr.rn = 1
+                            GROUP BY 
+                                sd.Outlet_id,
+                                sd.Batch_no,
+                                CAST(sd.Date AS DATE)
+                            ORDER BY 
+                                sd.Batch_no DESC;";
+                var result = db.GetTable(query);
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, result);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
 
     }
 }
