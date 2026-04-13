@@ -226,7 +226,7 @@ namespace Stock_Backend.Controllers
                                 LatestRate lr 
                                 ON sd.Stock_id = lr.Stock_id AND lr.rn = 1
                             WHERE Batch_no = @BatchNo";
-                var result = db.GetTable(query, new SqlParameter("@BatchNo", BatchNo));
+                var result = db.GetTable(query, new SqlParameter[] { new SqlParameter("@BatchNo", BatchNo) });
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }

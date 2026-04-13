@@ -47,17 +47,37 @@ namespace Stock_Backend
             return dt;
         }
 
-        public DataTable GetTable(String selectquery, params SqlParameter[] parameters)
+        //public DataTable GetTable(String selectquery, params SqlParameter[] parameters)
+        //{
+        //    SqlCommand cmd = new SqlCommand(selectquery, cn);
+        //    if (parameters != null)
+        //    {
+        //        cmd.Parameters.AddRange(parameters);
+        //    }
+        //    da = new SqlDataAdapter(cmd);
+        //    DataTable dt = new DataTable();
+        //    da.Fill(dt);
+        //    return dt;
+        //}
+
+        public DataTable GetTable(string query, SqlParameter[] parameters)
         {
-            SqlCommand cmd = new SqlCommand(selectquery, cn);
-            if (parameters != null)
+            using (SqlCommand cmd = new SqlCommand(query, cn))
             {
-                cmd.Parameters.AddRange(parameters);
+                cmd.CommandType = CommandType.Text;
+
+                if (parameters != null)
+                {
+                    cmd.Parameters.AddRange(parameters);
+                }
+
+                using (SqlDataAdapter da = new SqlDataAdapter(cmd))
+                {
+                    DataTable dt = new DataTable();
+                    da.Fill(dt);
+                    return dt;
+                }
             }
-            da = new SqlDataAdapter(cmd);
-            DataTable dt = new DataTable();
-            da.Fill(dt);
-            return dt;
         }
 
         public bool IsExists(string Insertquery)

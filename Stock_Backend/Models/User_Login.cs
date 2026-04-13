@@ -12,8 +12,8 @@ namespace Stock_Backend.Models
         public string User_name { get; set; }
         public string Password { get; set; }
         public int Role_id { get; set; }
-        public char Log_in {  get; set; }
-        public char Status { get; set; }
+        public int Log_in {  get; set; }
+        public int Status { get; set; }
         public string Created_by { get; set; }
     }
 }

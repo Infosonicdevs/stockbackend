@@ -75,22 +75,67 @@ namespace Stock_Backend.Controllers
         {
             try
             {
+                if (request == null || string.IsNullOrEmpty(request.User_name) || string.IsNullOrEmpty(request.Password))
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                    {
+                        success = false,
+                        message = "Username and Password are required"
+                    });
+                }
+
                 db.Connect();
-                var result = db.GetTable("SELECT USER_LOGIN.User_id, USER_LOGIN.Emp_id, USER_LOGIN.User_name, USER_LOGIN.Role_id, USER_LOGIN.Log_in, USER_LOGIN.Status, ROLE_MASTER.Role FROM USER_LOGIN INNER JOIN ROLE_MASTER ON ROLE_MASTER.Role_id = USER_LOGIN.Role_id WHERE USER_LOGIN.User_name = '" + request.User_name + "'AND USER_LOGIN.Password = '" + request.Password + "'AND USER_LOGIN.Log_in = 0 AND USER_LOGIN.Status = 1");
+
+                string query = @"SELECT 
+                                    UL.User_id,
+                                    UL.Emp_id,
+                                    UL.User_name,
+                                    UL.Role_id,
+                                    UL.Log_in,
+                                    UL.Status,
+                                    RM.Role
+                                FROM USER_LOGIN UL
+                                INNER JOIN ROLE_MASTER RM ON RM.Role_id = UL.Role_id
+                                WHERE 
+                                    UL.User_name = @UserName
+                                    AND UL.Password = @Password
+                                    AND UL.Log_in = 0
+                                    AND UL.Status = 1";
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@UserName", request.User_name),
+                    new SqlParameter("@Password", request.Password)
+                };
+
+                var result = db.GetTable(query, parameters);
                 db.Disconnect();
+
                 if (result.Rows.Count > 0)
                 {
-                    return Request.CreateResponse(HttpStatusCode.OK, new { success = true, data = result });
+                    return Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        success = true,
+                        data = result
+                    });
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, new { success = false, message = "Invalid Credentials!", data = new DataTable() });
+                    return Request.CreateResponse(HttpStatusCode.Unauthorized, new
+                    {
+                        success = false,
+                        message = "Invalid Credentials"
+                    });
                 }
             }
             catch (Exception ex)
             {
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, new { success = false, message = ex.Message });
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
@@ -232,7 +277,7 @@ namespace Stock_Backend.Controllers
                     if (!db.IsExists("select * from User_Login where User_name='"+user.User_name+"'"))
                     {
                         SqlCommand cmd = new SqlCommand("Sp_User_Login", db.cn);
-                        cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                        cmd.CommandType = CommandType.StoredProcedure;
 
                         cmd.Parameters.AddWithValue("@Emp_id", user.Emp_id);
                         cmd.Parameters.AddWithValue("@User_name", user.User_name);
