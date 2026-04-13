@@ -20,11 +20,11 @@ namespace Stock_Backend.Controllers
             try
             {
                 db.Connect();
-                var result = db.GetTable("select * from VIEW_PURCHASE");
+                var result = db.GetTable("SELECT * FROM VIEW_PURCHASE WHERE Status = '1'");
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
@@ -35,7 +35,7 @@ namespace Stock_Backend.Controllers
         {
             try
             {
-                var result = db.GetTable("select Pur_id, Round_Off_id, Hamali_id, Commi_id, Transport_id, Ma_ses_id, Tcs_id, Transfer_id, Net_Disc_id from VIEW_BAZAR_SETTING");
+                var result = db.GetTable("select * from VIEW_BAZAR_SETTING");
 
                 var list = new List<BazaSetting>();
 
@@ -66,7 +66,7 @@ namespace Stock_Backend.Controllers
 
         [Route("api/PurchaseTransaction")]
         [HttpPost]
-        public HttpResponseMessage PostPurchaseTransaction([FromBody]PURCHASE_Transaction request)
+        public HttpResponseMessage PostPurchaseTransaction([FromBody] PURCHASE_Transaction request)
         {
             try
             {
@@ -149,12 +149,12 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Card_no", request.Card_no);
                                     cmd.Parameters.AddWithValue("@Invert", 'G');
                                     cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
-                                    cmd.Parameters.AddWithValue("@Net_dis_l_id ", bazar_setting_id[0].Net_Disc_id);
+                                    cmd.Parameters.AddWithValue("@Net_dis_l_id", bazar_setting_id[0].Net_Disc_id);
                                     if (request.CashTrans == 'T')
                                     {
-                                        cmd.Parameters.AddWithValue("@Transfer_id", gst_slab_result.Rows[0]["Transfer_id"]);
+                                        cmd.Parameters.AddWithValue("@Transfer_id", bazar_setting_id[0].Transfer_id);
                                     }
-                                    else if (request.CashTrans == 'C')
+                                    else
                                     {
                                         cmd.Parameters.AddWithValue("@Transfer_id", 0);
                                     }
@@ -205,7 +205,7 @@ namespace Stock_Backend.Controllers
                                     {
                                         throw new Exception($"GST slab not found for Stock_id {purchase.Stock_id}");
                                     }
-                                }                              
+                                }
                                 transaction.Commit();
                                 db.Disconnect();
                                 return Request.CreateResponse(HttpStatusCode.OK, "Purchase Transaction Record Inserted");
@@ -321,10 +321,10 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Card_no", request.Card_no);
                                     cmd.Parameters.AddWithValue("@Invert", 'G');
                                     cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
-                                    cmd.Parameters.AddWithValue("@Net_dis_l_id ", bazar_setting_id[0].Net_Disc_id);
+                                    cmd.Parameters.AddWithValue("@Net_dis_l_id", bazar_setting_id[0].Net_Disc_id);
                                     if (request.CashTrans == 'T')
                                     {
-                                        cmd.Parameters.AddWithValue("@Transfer_id", gst_slab_result.Rows[0]["Transfer_id"]);
+                                        cmd.Parameters.AddWithValue("@Transfer_id", bazar_setting_id[0].Transfer_id);
                                     }
                                     else if (request.CashTrans == 'C')
                                     {
@@ -388,7 +388,7 @@ namespace Stock_Backend.Controllers
                                     {
                                         throw new Exception($"GST slab not found for Stock_id {purchase.Stock_id}");
                                     }
-                                }                             
+                                }
                                 transaction.Commit();
                                 db.Disconnect();
                                 return Request.CreateResponse(HttpStatusCode.OK, "Purchase Transaction Record Updated");
@@ -405,6 +405,34 @@ namespace Stock_Backend.Controllers
                 }
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid user");
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+
+        [Route("api/DelPurchaseTransaction")]
+        [HttpPost]
+        public HttpResponseMessage DeletePurchase(int Invoice_id, int Trans_id, string Reason)
+        {
+            try
+            {
+                db.Connect();
+
+                SqlCommand cmd = new SqlCommand("Sp_Bazar_purchase_dlt", db.cn);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@Invoice_id", Invoice_id);
+                cmd.Parameters.AddWithValue("@Trans_id", Trans_id);
+                cmd.Parameters.AddWithValue("@Reason", Reason);
+
+                cmd.ExecuteNonQuery();
+
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, "Purchase Deleted Successfully");
             }
             catch (Exception ex)
             {
