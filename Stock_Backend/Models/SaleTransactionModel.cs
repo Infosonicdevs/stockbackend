@@ -9,7 +9,7 @@ namespace Stock_Backend.Models
     {
         //  SALE
         public int Sale_id { get; set; }
-        public int Vibhag_id { get; set; }
+        public int Trans_id { get; set; }
         public int Outlet_id { get; set; }
         public DateTime Sale_date { get; set; }
         public int Counter_id { get; set; }
@@ -17,6 +17,8 @@ namespace Stock_Backend.Models
         public int Emp_id { get; set; }
         public int State_id { get; set; }
         public string Card_no { get; set; }
+
+        public string Reason { get; set; }
 
         public decimal Total_quantity { get; set; }
         public decimal Total_Rate_amt { get; set; }
