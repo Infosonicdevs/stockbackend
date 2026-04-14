@@ -32,22 +32,22 @@ namespace Stock_Backend.Controllers
         }
 
 
-        [Route("api/PurchaseTransaction/InvoiceId{invoice_id}")]
+        [Route("api/PurchaseTransaction")]
         [HttpGet]
-        public HttpResponseMessage GetPurchaseByInvoice(int invoice_id)
+        public HttpResponseMessage GetPurchaseByInvoice(string Invoice_id)
         {
             try
             {
                 db.Connect();
                 string query = @" SELECT  p.Invoice_id, p.Invoice_date,  p.Vend_id,  pd.Stock_id, pd.Price, pd.Quantity, pd.Total, pd.CGST_amt, pd.SGST_amt, pd.IGST_amt
-            FROM PURCHASE p
-            INNER JOIN PURCHASE_DETAILS pd 
-            ON p.Invoice_id = pd.Invoice_id
-            WHERE p.Invoice_id = @Invoice_id
-            AND p.Status = '1' ";
+                                FROM PURCHASE p
+                                INNER JOIN PURCHASE_DETAILS pd 
+                                ON p.Invoice_id = pd.Invoice_id
+                                WHERE p.Invoice_id = @Invoice_id
+                                AND p.Status = '1' ";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
-                cmd.Parameters.AddWithValue("@Invoice_id", invoice_id);
+                cmd.Parameters.AddWithValue("@Invoice_id", Invoice_id);
 
                 SqlDataAdapter da = new SqlDataAdapter(cmd);
                 DataTable dt = new DataTable();
