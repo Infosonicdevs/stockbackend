@@ -162,6 +162,7 @@
     <Compile Include="Controllers\BazarSettingsController.cs" />
     <Compile Include="Controllers\CityController.cs" />
     <Compile Include="Controllers\CounterController.cs" />
+    <Compile Include="Controllers\CurrentStockController.cs" />
     <Compile Include="Controllers\CustomerController.cs" />
     <Compile Include="Controllers\DistController.cs" />
     <Compile Include="Controllers\EmployeeController.cs" />
@@ -255,6 +256,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Views\CurrentStock\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
