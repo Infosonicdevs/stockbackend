@@ -32,6 +32,49 @@ namespace Stock_Backend.Controllers
         }
 
 
+        [HttpGet]
+        [Route("api/SaleTransaction/Details")]
+        public HttpResponseMessage GetSaleDetails(int Sale_id)
+        {
+            try
+            {
+                db.Connect();
+
+                string query = @"
+        SELECT 
+            s.Sale_id,
+            s.Sale_date,
+            s.Final_amt,
+            s.Narr,
+            d.Details_id,
+            d.Stock_id,
+            d.Quantity,
+            d.MRP,
+            d.Rate,
+            d.Amount
+        FROM SALE s
+        INNER JOIN SALE_DETAILS d 
+            ON s.Sale_id = d.Sale_Rtn_id
+        WHERE s.Sale_id = @Sale_id
+        AND s.Status = 1";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@Sale_id", Sale_id);
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, dt);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
         [HttpPost]
         [Route("api/SaleTransaction")]
         public HttpResponseMessage PostSaleTransaction([FromBody] SaleTransactionModel request)
