@@ -172,8 +172,8 @@
     <Compile Include="Controllers\LedgerController.cs" />
     <Compile Include="Controllers\OutletController.cs" />
     <Compile Include="Controllers\PrifixController.cs" />
-    <Compile Include="Controllers\PurchaseReturnController.cs" />
     <Compile Include="Controllers\PurchaseTransactionController.cs" />
+    <Compile Include="Controllers\Purchase_ReturnController.cs" />
     <Compile Include="Controllers\RoleController.cs" />
     <Compile Include="Controllers\SaleTransactionController.cs" />
     <Compile Include="Controllers\SansthaController.cs" />
@@ -212,7 +212,7 @@
     <Compile Include="Models\LEDGER_SUBGROUP.cs" />
     <Compile Include="Models\OUTLET.cs" />
     <Compile Include="Models\PREFIX_MASTER.cs" />
-    <Compile Include="Models\PurchaseReturn.cs" />
+    <Compile Include="Models\PurchaseReturnModel.cs" />
     <Compile Include="Models\PURCHASE_Transaction.cs" />
     <Compile Include="Models\PURCHASE_DETAILS.cs" />
     <Compile Include="Models\Role_Master.cs" />
