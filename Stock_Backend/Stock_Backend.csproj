@@ -162,6 +162,7 @@
     <Compile Include="Controllers\BazarSettingsController.cs" />
     <Compile Include="Controllers\CityController.cs" />
     <Compile Include="Controllers\CounterController.cs" />
+    <Compile Include="Controllers\Counter_closeController.cs" />
     <Compile Include="Controllers\CurrentStockController.cs" />
     <Compile Include="Controllers\CustomerController.cs" />
     <Compile Include="Controllers\DistController.cs" />
@@ -202,6 +203,7 @@
     <Compile Include="Models\Bazar_settg.cs" />
     <Compile Include="Models\City_Master.cs" />
     <Compile Include="Models\Counter.cs" />
+    <Compile Include="Models\CounterCloseModel.cs" />
     <Compile Include="Models\CUSTOMER.cs" />
     <Compile Include="Models\Dist_Master.cs" />
     <Compile Include="Models\Employee_Info.cs" />
