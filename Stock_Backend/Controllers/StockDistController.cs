@@ -286,5 +286,33 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        [HttpDelete]
+        [Route("api/DeleteStockDistribution")]
+        public HttpResponseMessage DeleteStockDistribution(string BatchNo)
+        {
+            if (BatchNo == null)
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "BatchNo is required.");
+            }
+
+            try
+            {
+
+                db.Connect();
+
+                SqlCommand delCmd = new SqlCommand("DELETE FROM STOCK_DISTRIBUTION WHERE Batch_no=@Batch_no ", db.cn);
+                delCmd.Parameters.AddWithValue("@Batch_no", BatchNo);
+                delCmd.ExecuteNonQuery();
+
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, "Batch Deleted: " + BatchNo);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
     }
 }
