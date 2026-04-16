@@ -176,6 +176,7 @@
     <Compile Include="Controllers\Purchase_ReturnController.cs" />
     <Compile Include="Controllers\RoleController.cs" />
     <Compile Include="Controllers\SaleTransactionController.cs" />
+    <Compile Include="Controllers\Sale_ReturnController.cs" />
     <Compile Include="Controllers\SansthaController.cs" />
     <Compile Include="Controllers\StateController.cs" />
     <Compile Include="Controllers\StockBalanceController.cs" />
@@ -216,6 +217,7 @@
     <Compile Include="Models\PURCHASE_Transaction.cs" />
     <Compile Include="Models\PURCHASE_DETAILS.cs" />
     <Compile Include="Models\Role_Master.cs" />
+    <Compile Include="Models\SaleReturnModel.cs" />
     <Compile Include="Models\SaleTransactionModel.cs" />
     <Compile Include="Models\Sanstha_Info.cs" />
     <Compile Include="Models\State_Master.cs" />
