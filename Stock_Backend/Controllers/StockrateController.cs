@@ -84,10 +84,10 @@ namespace Stock_Backend.Controllers
                     cmd.Parameters.AddWithValue("@MRP", stockRate.MRP);
                     cmd.Parameters.AddWithValue("@Discount", stockRate.Discount);
                     cmd.Parameters.AddWithValue("@Rate", stockRate.Rate);
-                    cmd.Parameters.AddWithValue("@Change_date", stockRate.Change_date);
+                    cmd.Parameters.AddWithValue("@Change_date", DateTime.Now.Date);
                     cmd.Parameters.AddWithValue("@Sequence_no", stockRate.Sequence_no);
                     cmd.Parameters.AddWithValue("@On_from", stockRate.On_form);
-                    cmd.Parameters.AddWithValue("@txt", 2); 
+                    cmd.Parameters.AddWithValue("@txt", 1); 
 
                     cmd.ExecuteNonQuery();
                     db.Disconnect();
