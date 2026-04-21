@@ -87,15 +87,18 @@ namespace Stock_Backend.Controllers
                 db.Connect();
 
                 string query = @"SELECT 
-                                    UL.User_id,
-                                    UL.Emp_id,
-                                    UL.User_name,
-                                    UL.Role_id,
-                                    UL.Log_in,
-                                    UL.Status,
-                                    RM.Role
+	                                UL.User_id,
+	                                UL.Emp_id,
+	                                UL.User_name,
+	                                UL.Role_id,
+	                                UL.Log_in,
+	                                UL.Status,
+	                                RM.Role,
+	                                EI.Outlet_id,
+	                                (SELECT Outlet_name FROM OUTLET where Outlet_id = EI.Outlet_id) as Outlet_name
                                 FROM USER_LOGIN UL
                                 INNER JOIN ROLE_MASTER RM ON RM.Role_id = UL.Role_id
+                                INNER JOIN EMPLOYEE_INFO EI ON EI.Emp_id = UL.Emp_id
                                 WHERE 
                                     UL.User_name = @UserName
                                     AND UL.Password = @Password
