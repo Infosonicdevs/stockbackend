@@ -49,6 +49,7 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        [HttpPost]
         [Route("api/Voucher")]
         public HttpResponseMessage PostVoucher([FromBody] VOUCHER voucher)
         {
@@ -79,6 +80,17 @@ namespace Stock_Backend.Controllers
                 {
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Sum of trans detail amount is not matched with trans amount");
+                }
+
+
+                decimal Cr = voucher.Trans_Details .FirstOrDefault(x => x.CrDr_id == 1)?.Amount ?? 0;
+
+                decimal Dr = voucher.Trans_Details .FirstOrDefault(x => x.CrDr_id == 2)?.Amount ?? 0;
+
+                if (Cr != Dr)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse( HttpStatusCode.BadRequest,"Credit and Debit amount must be equal" );
                 }
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
@@ -184,7 +196,6 @@ namespace Stock_Backend.Controllers
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Sum of trans detail amount is not matched with trans amount");
                 }
-
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
                 {
                     try

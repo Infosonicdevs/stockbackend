@@ -165,6 +165,8 @@
     <Compile Include="Controllers\Counter_closeController.cs" />
     <Compile Include="Controllers\CurrentStockController.cs" />
     <Compile Include="Controllers\CustomerController.cs" />
+    <Compile Include="Controllers\Day_BookController.cs" />
+    <Compile Include="Controllers\Day_CloseController.cs" />
     <Compile Include="Controllers\DistController.cs" />
     <Compile Include="Controllers\EmployeeController.cs" />
     <Compile Include="Controllers\GSTSlabController.cs" />
@@ -205,6 +207,8 @@
     <Compile Include="Models\Counter.cs" />
     <Compile Include="Models\CounterCloseModel.cs" />
     <Compile Include="Models\CUSTOMER.cs" />
+    <Compile Include="Models\DaybookModel.cs" />
+    <Compile Include="Models\DayCloseModel.cs" />
     <Compile Include="Models\Dist_Master.cs" />
     <Compile Include="Models\Employee_Info.cs" />
     <Compile Include="Models\GST_SLAB.cs" />
