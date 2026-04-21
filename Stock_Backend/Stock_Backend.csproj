@@ -165,7 +165,7 @@
     <Compile Include="Controllers\Counter_closeController.cs" />
     <Compile Include="Controllers\CurrentStockController.cs" />
     <Compile Include="Controllers\CustomerController.cs" />
-    <Compile Include="Controllers\Day_BookController.cs" />
+    <Compile Include="Controllers\DayBookController.cs" />
     <Compile Include="Controllers\Day_CloseController.cs" />
     <Compile Include="Controllers\DistController.cs" />
     <Compile Include="Controllers\EmployeeController.cs" />
