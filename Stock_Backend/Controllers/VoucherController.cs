@@ -77,39 +77,39 @@ namespace Stock_Backend.Controllers
                 }
 
                 decimal Cr = voucher.Trans_Details
-                 .Where(x => x.CrDr_id == 1)
-                 .Sum(x => x.Amount);
+                    .Where(x => x.CrDr_id == 1)
+                    .Sum(x => x.Amount);
 
                 decimal Dr = voucher.Trans_Details
-                                .Where(x => x.CrDr_id == 2)
-                                .Sum(x => x.Amount);
+                    .Where(x => x.CrDr_id == 2)
+                    .Sum(x => x.Amount);
 
-                // Contra logic
+                // CONTRA ONLY
                 if (voucher.Trans.Trans_type_id == 6)
                 {
+                    // CR = DR compulsory ONLY for contra
+                    if (Cr != Dr)
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(
+                            HttpStatusCode.BadRequest,
+                            "Credit and Debit amount must be equal for Contra"
+                        );
+                    }
+
                     voucher.Trans.Trans_amt = Cr;
                 }
                 else
                 {
+                    // Journal / Pay → NO CR-DR check
                     if (voucher.Trans.Trans_amt != voucher.Trans_Details.Sum(x => x.Amount))
                     {
                         db.Disconnect();
-                        return Request.CreateResponse(HttpStatusCode.BadRequest,
-                            "Sum of trans detail amount is not matched with trans amount");
+                        return Request.CreateResponse(
+                            HttpStatusCode.BadRequest,
+                            "Sum of trans detail amount is not matched with trans amount"
+                        );
                     }
-                }
-
-                if (Cr != Dr)
-                {
-                    db.Disconnect();
-                    return Request.CreateResponse(HttpStatusCode.BadRequest,
-                        "Credit and Debit amount must be equal");
-                }
-
-                if (Cr != Dr)
-                {
-                    db.Disconnect();
-                    return Request.CreateResponse( HttpStatusCode.BadRequest,"Credit and Debit amount must be equal" );
                 }
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
