@@ -76,16 +76,35 @@ namespace Stock_Backend.Controllers
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid Trans Detail request");
                 }
 
-                if (voucher.Trans.Trans_amt != voucher.Trans_Details.Sum(x => x.Amount))
+                decimal Cr = voucher.Trans_Details
+                 .Where(x => x.CrDr_id == 1)
+                 .Sum(x => x.Amount);
+
+                decimal Dr = voucher.Trans_Details
+                                .Where(x => x.CrDr_id == 2)
+                                .Sum(x => x.Amount);
+
+                // Contra logic
+                if (voucher.Trans.Trans_type_id == 6)
                 {
-                    db.Disconnect();
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Sum of trans detail amount is not matched with trans amount");
+                    voucher.Trans.Trans_amt = Cr;
+                }
+                else
+                {
+                    if (voucher.Trans.Trans_amt != voucher.Trans_Details.Sum(x => x.Amount))
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(HttpStatusCode.BadRequest,
+                            "Sum of trans detail amount is not matched with trans amount");
+                    }
                 }
 
-
-                decimal Cr = voucher.Trans_Details .FirstOrDefault(x => x.CrDr_id == 1)?.Amount ?? 0;
-
-                decimal Dr = voucher.Trans_Details .FirstOrDefault(x => x.CrDr_id == 2)?.Amount ?? 0;
+                if (Cr != Dr)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest,
+                        "Credit and Debit amount must be equal");
+                }
 
                 if (Cr != Dr)
                 {
@@ -196,6 +215,17 @@ namespace Stock_Backend.Controllers
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Sum of trans detail amount is not matched with trans amount");
                 }
+
+                decimal Cr = voucher.Trans_Details.FirstOrDefault(x => x.CrDr_id == 1)?.Amount ?? 0;
+
+                decimal Dr = voucher.Trans_Details.FirstOrDefault(x => x.CrDr_id == 2)?.Amount ?? 0;
+
+                if (Cr != Dr)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Credit and Debit amount must be equal");
+                }
+
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
                 {
                     try
