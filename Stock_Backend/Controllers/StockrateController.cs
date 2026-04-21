@@ -19,7 +19,7 @@ namespace Stock_Backend.Controllers
             try
             {
                 db.Connect();
-                var result = db.GetTable("SELECT * FROM STOCK_RATE");
+                var result = db.GetTable("SELECT * FROM VIEW_STOCK_RATE");
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
