@@ -41,6 +41,30 @@ AND CAST(Trans_date AS DATE) < @Date";
 
                 decimal lastTotal = Convert.ToDecimal(cmd1.ExecuteScalar());
 
+                //GET COUNTERS
+                string counterQuery = @"SELECT ac.Counter_id,ac.Emp_id,ac.Status,
+                                     (SELECT ISNULL(SUM(Trans_amt),0)
+                                     FROM Trans
+                                     WHERE Outlet_id = @Outlet_id
+                                     AND CAST(Trans_date AS DATE) = @Date
+                                     AND Trans_code IN ('C','S')) AS Total_CR,
+
+                                     (SELECT ISNULL(SUM(Trans_amt),0)
+                                     FROM Trans
+                                     WHERE Outlet_id = @Outlet_id
+                                     AND CAST(Trans_date AS DATE) = @Date
+                                     AND Trans_code = 'D') AS Total_DR
+
+                                     FROM ASSIGN_COUNTER ac
+                                     WHERE CAST(ac.Login_date AS DATE) = @Date";
+
+                SqlCommand cmd6 = new SqlCommand(counterQuery, db.cn);
+                cmd6.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
+                cmd6.Parameters.AddWithValue("@Date", date);
+
+                DataTable counterTable = new DataTable();
+                new SqlDataAdapter(cmd6).Fill(counterTable);
+
                 // Today CR
                 string crQuery = @"SELECT ISNULL(SUM(Trans_amt),0)
                    FROM Trans
@@ -86,6 +110,20 @@ AND CAST(Trans_date AS DATE) < @Date";
                 cmd5.Parameters.AddWithValue("@Date", date);
 
                 int totalLogout = Convert.ToInt32(cmd5.ExecuteScalar());
+
+                var result = new
+                {
+                    LastTotal = lastTotal,
+                    TodayCR = todayCR,
+                    TodayDR = todayDR,
+                    TodayTotal = todayTotal,
+                    FinalTotal = finalTotal,
+                    TotalLogin = totalLogin,
+                    TotalLogout = totalLogout,
+                    Counters = counterTable
+                };
+
+                return Request.CreateResponse(HttpStatusCode.OK, result);
 
                 db.Disconnect();
 
