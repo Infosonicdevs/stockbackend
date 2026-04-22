@@ -173,7 +173,44 @@ namespace Stock_Backend.Controllers
         {
             try
             {
-                if (request.Username == "admin" && request.Password == "admin@123")
+                if (request == null || string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                    {
+                        success = false,
+                        message = "Username and Password are required"
+                    });
+                }
+
+                db.Connect();
+
+                string query = @"SELECT 
+	                                UL.User_id,
+	                                UL.Emp_id,
+	                                UL.User_name,
+	                                UL.Role_id,
+	                                UL.Log_in,
+	                                UL.Status,
+	                                RM.Role,
+	                                EI.Outlet_id,
+	                                (SELECT Outlet_name FROM OUTLET where Outlet_id = EI.Outlet_id) as Outlet_name
+                                FROM USER_LOGIN UL
+                                INNER JOIN ROLE_MASTER RM ON RM.Role_id = UL.Role_id
+                                INNER JOIN EMPLOYEE_INFO EI ON EI.Emp_id = UL.Emp_id
+                                WHERE 
+                                    UL.User_name = @UserName
+                                    AND UL.Password = @Password
+                                    AND RM.Role_id = 1";
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@UserName", request.Username),
+                    new SqlParameter("@Password", request.Password)
+                };
+
+                var userResult = db.GetTable(query, parameters);
+
+                if (userResult.Rows.Count > 0)
                 {
                     DateTime dateInDateTime;
 
@@ -187,13 +224,13 @@ namespace Stock_Backend.Controllers
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid date format");
                     }
 
-                    db.Connect();
                     var result = db.ExecuteScalar(
                             "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
                             "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
                             "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
                     );
                     //db.Execute("INSERT INTO TEMP_TBL(Date, Status) VALUES('" + request.Date + "', 1);");
+
                     db.Disconnect();
                     if (result != null)
                     {
@@ -206,7 +243,7 @@ namespace Stock_Backend.Controllers
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, new { success = false, message = "Invalid Credentials!", data = new DataTable() });
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, new { success = false, message = "Invalid Credentials! Check if Admin Role!", data = new DataTable() });
                 }
             }
             catch (Exception ex)
