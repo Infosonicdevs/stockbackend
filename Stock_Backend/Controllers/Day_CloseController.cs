@@ -1,9 +1,7 @@
 ﻿using Stock_Backend.Models;
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -24,118 +22,136 @@ namespace Stock_Backend.Controllers
 
                 DateTime date = (model.Trans_date == DateTime.MinValue)
                                 ? DateTime.Now.Date
-                                : model.Trans_date;
+                                : model.Trans_date.Date;
 
-                //Last Total
+                //  LAST TOTAL (OPENING)
+                // OPENING BALANCE — daily wise ABS cumulative (same as GetFullBalance)
                 string lastQuery = @"
 SELECT 
-ISNULL(SUM(CASE WHEN Trans_code IN ('C','S') THEN Trans_amt ELSE 0 END),0) -
-ISNULL(SUM(CASE WHEN Trans_code='D' THEN Trans_amt ELSE 0 END),0)
-FROM Trans
-WHERE Outlet_id=@Outlet_id 
-AND CAST(Trans_date AS DATE) < @Date";
+    CAST(t.Trans_date AS DATE) AS TransDate,
+    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+FROM Trans t
+INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+WHERE t.Outlet_id = @Outlet_id
+AND t.Status = 1
+AND td.CashTrans = 'C'
+AND CAST(t.Trans_date AS DATE) < @Date
+GROUP BY CAST(t.Trans_date AS DATE)
+ORDER BY TransDate";
 
                 SqlCommand cmd1 = new SqlCommand(lastQuery, db.cn);
                 cmd1.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
                 cmd1.Parameters.AddWithValue("@Date", date);
 
-                decimal lastTotal = Convert.ToDecimal(cmd1.ExecuteScalar());
+                DataTable dt1 = new DataTable();
+                new SqlDataAdapter(cmd1).Fill(dt1);
 
-                //GET COUNTERS
-                string counterQuery = @"SELECT ac.Counter_id,ac.Emp_id,ac.Status,
-                                     (SELECT ISNULL(SUM(Trans_amt),0)
-                                     FROM Trans
-                                     WHERE Outlet_id = @Outlet_id
-                                     AND CAST(Trans_date AS DATE) = @Date
-                                     AND Trans_code IN ('C','S')) AS Total_CR,
+                // Per day ABS add — cumulative opening balance
+                decimal lastTotal = 0;
+                foreach (DataRow row in dt1.Rows)
+                {
+                    decimal cr = Convert.ToDecimal(row["CR"]);
+                    decimal dr = Convert.ToDecimal(row["DR"]);
+                    lastTotal += Math.Abs(cr - dr);
+                }
 
-                                     (SELECT ISNULL(SUM(Trans_amt),0)
-                                     FROM Trans
-                                     WHERE Outlet_id = @Outlet_id
-                                     AND CAST(Trans_date AS DATE) = @Date
-                                     AND Trans_code = 'D') AS Total_DR
+         
 
-                                     FROM ASSIGN_COUNTER ac
-                                     WHERE CAST(ac.Login_date AS DATE) = @Date";
+                // TODAY CR / DR
+                string todayQuery = @"
+SELECT 
+    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+FROM Trans t
+INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+WHERE t.Outlet_id = @Outlet_id
+AND CAST(t.Trans_date AS DATE) = @Date";
 
-                SqlCommand cmd6 = new SqlCommand(counterQuery, db.cn);
-                cmd6.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
-                cmd6.Parameters.AddWithValue("@Date", date);
-
-                DataTable counterTable = new DataTable();
-                new SqlDataAdapter(cmd6).Fill(counterTable);
-
-                // Today CR
-                string crQuery = @"SELECT ISNULL(SUM(Trans_amt),0)
-                   FROM Trans
-                   WHERE Outlet_id=@Outlet_id 
-                   AND CAST(Trans_date AS DATE)=@Date 
-                   AND Trans_code IN ('C','S')";
-
-                SqlCommand cmd2 = new SqlCommand(crQuery, db.cn);
+                SqlCommand cmd2 = new SqlCommand(todayQuery, db.cn);
                 cmd2.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
                 cmd2.Parameters.AddWithValue("@Date", date);
 
-                decimal todayCR = Convert.ToDecimal(cmd2.ExecuteScalar());
+                DataTable dt = new DataTable();
+                new SqlDataAdapter(cmd2).Fill(dt);
 
-                // Today DR
-                string drQuery = @"SELECT ISNULL(SUM(Trans_amt),0)
-                   FROM Trans
-                   WHERE Outlet_id=@Outlet_id 
-                   AND CAST(Trans_date AS DATE)=@Date 
-                   AND Trans_code IN ('D')";
+                decimal todayCR = Convert.ToDecimal(dt.Rows[0]["CR"]);
+                decimal todayDR = Convert.ToDecimal(dt.Rows[0]["DR"]);
 
-                SqlCommand cmd3 = new SqlCommand(drQuery, db.cn);
-                cmd3.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
-                cmd3.Parameters.AddWithValue("@Date", date);
-
-                decimal todayDR = Convert.ToDecimal(cmd3.ExecuteScalar());
-
-                decimal todayTotal = todayCR - todayDR;
+                decimal todayTotal = Math.Abs(todayCR - todayDR);
                 decimal finalTotal = lastTotal + todayTotal;
 
-                // Employee Login/Logout Count
-                string loginQuery = @"SELECT COUNT(*) FROM ASSIGN_COUNTER 
-                             WHERE Status='O' AND Login_date=@Date";
+                //  LOGIN / LOGOUT COUNT
+                string loginQuery = @"
+SELECT COUNT(*) FROM ASSIGN_COUNTER ac
+INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+WHERE ac.Status = 'O' 
+AND CAST(ac.Login_date AS DATE) = @Date
+AND c.Outlet_id = @Outlet_id";
 
-                SqlCommand cmd4 = new SqlCommand(loginQuery, db.cn);
+                SqlCommand cmd3 = new SqlCommand(loginQuery, db.cn);
+                cmd3.Parameters.AddWithValue("@Date", date);
+                cmd3.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
+
+                int totalLogin = Convert.ToInt32(cmd3.ExecuteScalar());
+
+                string logoutQuery = @"
+SELECT COUNT(*) FROM ASSIGN_COUNTER ac
+INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+WHERE ac.Status = 'C' 
+AND CAST(ac.Login_date AS DATE) = @Date
+AND c.Outlet_id = @Outlet_id";
+
+                SqlCommand cmd4 = new SqlCommand(logoutQuery, db.cn);
                 cmd4.Parameters.AddWithValue("@Date", date);
+                cmd4.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
+                int totalLogout = Convert.ToInt32(cmd4.ExecuteScalar());
 
-                int totalLogin = Convert.ToInt32(cmd4.ExecuteScalar());
+                //  COUNTER LIST
+                string counterQuery = @"
+SELECT 
+    ac.Counter_id,
+    c.Counter_name,
+    ac.Emp_id,
+    ac.Status,
+    ac.Login_date,
+    ac.Log_out_date,
+    ac.Closing_bal
+FROM ASSIGN_COUNTER ac
+INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+WHERE CAST(ac.Login_date AS DATE) = @Date
+AND c.Outlet_id = @Outlet_id";
 
-                string logoutQuery = @"SELECT COUNT(*) FROM ASSIGN_COUNTER 
-                              WHERE Status='C' AND Login_date=@Date";
-
-                SqlCommand cmd5 = new SqlCommand(logoutQuery, db.cn);
+                SqlCommand cmd5 = new SqlCommand(counterQuery, db.cn);
                 cmd5.Parameters.AddWithValue("@Date", date);
+                cmd5.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
 
-                int totalLogout = Convert.ToInt32(cmd5.ExecuteScalar());
 
+
+                DataTable counterList = new DataTable();
+                new SqlDataAdapter(cmd5).Fill(counterList);
+
+                db.Disconnect();
+
+                //  FINAL 
                 var result = new
                 {
+                    Outlet_id = model.Outlet_id,
+                    Trans_date = date,
+
                     LastTotal = lastTotal,
                     TodayCR = todayCR,
                     TodayDR = todayDR,
                     TodayTotal = todayTotal,
                     FinalTotal = finalTotal,
+
                     TotalLogin = totalLogin,
                     TotalLogout = totalLogout,
-                    Counters = counterTable
+
+                    Counters = counterList
                 };
 
                 return Request.CreateResponse(HttpStatusCode.OK, result);
-
-                db.Disconnect();
-
-                model.LastTotal = lastTotal;
-                model.TodayCR = todayCR;
-                model.TodayDR = todayDR;
-                model.TodayTotal = todayTotal;
-                model.FinalTotal = finalTotal;
-                model.TotalLogin = totalLogin;
-                model.TotalLogout = totalLogout;
-
-                return Request.CreateResponse(HttpStatusCode.OK, model);
             }
             catch (Exception ex)
             {
@@ -144,6 +160,7 @@ AND CAST(Trans_date AS DATE) < @Date";
             }
         }
 
+        // CLOSE DAY
         [HttpPut]
         [Route("api/dayclose/close")]
         public HttpResponseMessage CloseDay(DayCloseModel model)
@@ -152,20 +169,20 @@ AND CAST(Trans_date AS DATE) < @Date";
             {
                 db.Connect();
 
-                DateTime date = model.Trans_date;
+                DateTime date = model.Trans_date.Date;
 
-                // Logout all employees
                 string updateQuery = @"
-        UPDATE ASSIGN_COUNTER
-        SET Status='C',
-            Log_out_time = CONVERT(VARCHAR, GETDATE(), 108),
-            Log_out_date = CAST(GETDATE() AS DATE),
-            Closing_bal = @Closing
-        WHERE Status='O' AND Login_date=@Date";
+UPDATE ASSIGN_COUNTER
+SET Status='C',
+    Log_out_time = CONVERT(VARCHAR, GETDATE(), 108),
+    Log_out_date = CAST(GETDATE() AS DATE),
+    Closing_bal = @Closing
+WHERE Status='O' 
+AND CAST(Login_date AS DATE)=@Date";
 
                 SqlCommand cmd = new SqlCommand(updateQuery, db.cn);
                 cmd.Parameters.AddWithValue("@Closing", model.FinalTotal);
-                cmd.Parameters.Add("@Date", SqlDbType.Date).Value = date.Date;
+                cmd.Parameters.AddWithValue("@Date", date);
 
                 cmd.ExecuteNonQuery();
 
