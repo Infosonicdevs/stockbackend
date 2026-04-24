@@ -11,5 +11,6 @@ namespace Stock_Backend.Models
         public string Username { get; set; }
         public string Password { get; set; }
         public string Date {  get; set; }
+        public int Outlet_id { get; set; }
     }
 }

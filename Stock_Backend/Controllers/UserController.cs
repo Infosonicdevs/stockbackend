@@ -224,12 +224,43 @@ namespace Stock_Backend.Controllers
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid date format");
                     }
 
+                    //check Previous date is close or not
+                    string checkQuery = @"
+SELECT COUNT(*) FROM TEMP_TBL 
+WHERE Vibhag_id = @Outlet_id 
+AND Status = 1
+AND CAST(Date AS DATE) < @Date";
+
+                    SqlCommand checkCmd = new SqlCommand(checkQuery, db.cn);
+                    checkCmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
+                    checkCmd.Parameters.AddWithValue("@Date", dateInDateTime);
+
+                    int pendingClose = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                    if (pendingClose > 0)
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                        {
+                            success = false,
+                            message = "Previous day is not closed. Please close the day first!"
+                        });
+                    }
+
                     var result = db.ExecuteScalar(
-                            "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
-                            "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
-                            "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
-                    );
-                    //db.Execute("INSERT INTO TEMP_TBL(Date, Status) VALUES('" + request.Date + "', 1);");
+       "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
+       "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
+       "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
+   );
+
+                    SqlCommand cmdTemp = new SqlCommand("Sp_Temp_Tbl", db.cn);
+                    cmdTemp.CommandType = CommandType.StoredProcedure;
+                    cmdTemp.Parameters.AddWithValue("@Vibhag_id", request.Outlet_id);
+                    cmdTemp.Parameters.AddWithValue("@Date", dateInDateTime);
+                    cmdTemp.Parameters.AddWithValue("@Status", "1");
+                    cmdTemp.ExecuteNonQuery();
+
+                    db.Disconnect();
 
                     db.Disconnect();
                     if (result != null)
@@ -251,6 +282,8 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, new { success = false, message = ex.Message });
             }
         }
+
+
 
         [HttpGet]
         [Route("api/getLatestSystemDateSelectedByAdmin")]
