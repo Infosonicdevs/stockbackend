@@ -191,7 +191,7 @@ AND CAST(t.Trans_date AS DATE) BETWEEN @FromDate AND @ToDate";
                                WHERE t.Status = 1
                                AND CAST(t.Trans_date AS DATE) BETWEEN @FromDate AND @ToDate";
 
-                // 🔥 Outlet filter
+                //  Outlet filter
                 if (Outlet_id != null)
                 {
                     query += " AND t.Outlet_id = @Outlet_id";

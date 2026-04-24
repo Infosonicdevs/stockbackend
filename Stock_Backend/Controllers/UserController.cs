@@ -223,46 +223,51 @@ namespace Stock_Backend.Controllers
                     {
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid date format");
                     }
+                    int outlet_id = Convert.ToInt32(userResult.Rows[0]["Outlet_id"]);
 
-                    //check Previous date is close or not
+                    // Previous day close check
                     string checkQuery = @"
-SELECT COUNT(*) FROM TEMP_TBL 
+SELECT TOP 1 CAST(Date AS DATE) AS PendingDate 
+FROM TEMP_TBL 
 WHERE Vibhag_id = @Outlet_id 
 AND Status = 1
-AND CAST(Date AS DATE) < @Date";
+AND CAST(Date AS DATE) < @Date
+ORDER BY Date DESC";
 
                     SqlCommand checkCmd = new SqlCommand(checkQuery, db.cn);
-                    checkCmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
+                    checkCmd.Parameters.AddWithValue("@Outlet_id", outlet_id);
                     checkCmd.Parameters.AddWithValue("@Date", dateInDateTime);
 
-                    int pendingClose = Convert.ToInt32(checkCmd.ExecuteScalar());
+                    DataTable dtCheck = new DataTable();
+                    new SqlDataAdapter(checkCmd).Fill(dtCheck);
 
-                    if (pendingClose > 0)
+                    if (dtCheck.Rows.Count > 0)
                     {
+                        string pendingDate = Convert.ToDateTime(dtCheck.Rows[0]["PendingDate"]).ToString("dd-MM-yyyy");
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, new
                         {
                             success = false,
-                            message = "Previous day is not closed. Please close the day first!"
+                            message = pendingDate + " is Not Closed. Please close the day first!"
                         });
                     }
 
+
+
                     var result = db.ExecuteScalar(
-       "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
-       "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
-       "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
-   );
+                        "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
+                        "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
+                        "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
+                    );
 
                     SqlCommand cmdTemp = new SqlCommand("Sp_Temp_Tbl", db.cn);
                     cmdTemp.CommandType = CommandType.StoredProcedure;
-                    cmdTemp.Parameters.AddWithValue("@Vibhag_id", request.Outlet_id);
+                    cmdTemp.Parameters.AddWithValue("@Vibhag_id", outlet_id);  
                     cmdTemp.Parameters.AddWithValue("@Date", dateInDateTime);
                     cmdTemp.Parameters.AddWithValue("@Status", "1");
                     cmdTemp.ExecuteNonQuery();
 
-                    db.Disconnect();
-
-                    db.Disconnect();
+                    db.Disconnect(); 
                     if (result != null)
                     {
                         return Request.CreateResponse(HttpStatusCode.OK, new { success = true, data = result });

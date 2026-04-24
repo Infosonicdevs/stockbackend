@@ -25,7 +25,7 @@ namespace Stock_Backend.Controllers
                                 : model.Trans_date.Date;
 
                 //  LAST TOTAL (OPENING)
-                // OPENING BALANCE — daily wise ABS cumulative (same as GetFullBalance)
+                // OPENING BALANCE — daily 
                 string lastQuery = @"
 SELECT 
     CAST(t.Trans_date AS DATE) AS TransDate,
@@ -47,7 +47,7 @@ ORDER BY TransDate";
                 DataTable dt1 = new DataTable();
                 new SqlDataAdapter(cmd1).Fill(dt1);
 
-                // Per day ABS add — cumulative opening balance
+                // Per day ABS add —  opening balance
                 decimal lastTotal = 0;
                 foreach (DataRow row in dt1.Rows)
                 {
@@ -85,7 +85,7 @@ AND CAST(t.Trans_date AS DATE) = @Date";
                 string loginQuery = @"
 SELECT COUNT(*) FROM ASSIGN_COUNTER ac
 INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
-WHERE ac.Status = 'O' 
+WHERE (ac.Is_closed = 0 OR ac.Is_closed IS NULL)
 AND CAST(ac.Login_date AS DATE) = @Date
 AND c.Outlet_id = @Outlet_id";
 
@@ -98,7 +98,7 @@ AND c.Outlet_id = @Outlet_id";
                 string logoutQuery = @"
 SELECT COUNT(*) FROM ASSIGN_COUNTER ac
 INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
-WHERE ac.Status = 'C' 
+WHERE ac.Is_closed = 1
 AND CAST(ac.Login_date AS DATE) = @Date
 AND c.Outlet_id = @Outlet_id";
 
@@ -116,40 +116,68 @@ SELECT
     ac.Status,
     ac.Login_date,
     ac.Log_out_date,
-    ac.Closing_bal
+    ac.Opn_bal,
+    ac.Closing_bal,
+    ISNULL(SUM(s.Receive_cash), 0) AS Total_CR,
+    ISNULL(SUM(s.Return_cash), 0) AS Total_DR,
+    ISNULL(SUM(s.Receive_cash), 0) - ISNULL(SUM(s.Return_cash), 0) AS Net_Total
 FROM ASSIGN_COUNTER ac
 INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+LEFT JOIN SALE s ON s.Counter_id = ac.Counter_id
+    AND CAST(s.Sale_date AS DATE) = @Date
+    AND s.Status = 1
 WHERE CAST(ac.Login_date AS DATE) = @Date
-AND c.Outlet_id = @Outlet_id";
+AND c.Outlet_id = @Outlet_id
+GROUP BY 
+    ac.Counter_id, c.Counter_name, ac.Emp_id, ac.Status,
+    ac.Login_date, ac.Log_out_date, ac.Opn_bal, ac.Closing_bal";
 
                 SqlCommand cmd5 = new SqlCommand(counterQuery, db.cn);
                 cmd5.Parameters.AddWithValue("@Date", date);
                 cmd5.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
 
-
+       
 
                 DataTable counterList = new DataTable();
                 new SqlDataAdapter(cmd5).Fill(counterList);
 
-                db.Disconnect();
+                var counterResult = new System.Collections.Generic.List<object>();
+                foreach (DataRow row in counterList.Rows)
+                {
+                    decimal opn_bal = Convert.ToDecimal(row["Opn_bal"]);
+                    decimal net_total = Convert.ToDecimal(row["Net_Total"]);
 
-                //  FINAL 
+                    counterResult.Add(new
+                    {
+                        Counter_id = row["Counter_id"],
+                        Counter_name = row["Counter_name"],
+                        Emp_id = row["Emp_id"],
+                        Status = row["Status"],
+                        Login_date = row["Login_date"],
+                        Log_out_date = row["Log_out_date"],
+                        Opn_bal = opn_bal,
+                        Total_CR = row["Total_CR"],
+                        Total_DR = row["Total_DR"],
+                        Net_Total = net_total,
+                        Closing_bal = opn_bal + net_total  // ← Opening + Net_Total
+                    });
+                }
+
                 var result = new
                 {
                     Outlet_id = model.Outlet_id,
                     Trans_date = date,
-
                     LastTotal = lastTotal,
                     TodayCR = todayCR,
                     TodayDR = todayDR,
                     TodayTotal = todayTotal,
                     FinalTotal = finalTotal,
-
                     TotalLogin = totalLogin,
                     TotalLogout = totalLogout,
-
-                    Counters = counterList
+                    Counters = counterResult  
                 };
+
+                db.Disconnect();
 
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
@@ -171,24 +199,60 @@ AND c.Outlet_id = @Outlet_id";
 
                 DateTime date = model.Trans_date.Date;
 
+                string checkQuery = @"
+                     SELECT COUNT(*) FROM ASSIGN_COUNTER ac
+                     INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+                     WHERE (ac.Is_closed = 0 OR ac.Is_closed IS NULL)
+                     AND CAST(ac.Login_date AS DATE) = @Date
+                     AND c.Outlet_id = @Outlet_id";
+
+                SqlCommand checkCmd = new SqlCommand(checkQuery, db.cn);
+                checkCmd.Parameters.AddWithValue("@Date", date);
+                checkCmd.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
+
+                int activeCounters = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+                if (activeCounters > 0)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest,
+                        "Counters are not logged out. Please logout all counters first.");
+                }
+
                 string updateQuery = @"
-UPDATE ASSIGN_COUNTER
-SET Status='C',
-    Log_out_time = CONVERT(VARCHAR, GETDATE(), 108),
-    Log_out_date = CAST(GETDATE() AS DATE),
-    Closing_bal = @Closing
-WHERE Status='O' 
-AND CAST(Login_date AS DATE)=@Date";
+UPDATE ac
+SET ac.Is_closed = 1,
+    ac.Log_out_time = CONVERT(VARCHAR, GETDATE(), 108),
+    ac.Log_out_date = CAST(GETDATE() AS DATE),
+    ac.Closing_bal = @Closing
+FROM ASSIGN_COUNTER ac
+INNER JOIN COUNTER c ON ac.Counter_id = c.Counter_id
+WHERE (ac.Is_closed = 0 OR ac.Is_closed IS NULL)
+AND CAST(ac.Login_date AS DATE) = @Date
+AND c.Outlet_id = @Outlet_id";
 
                 SqlCommand cmd = new SqlCommand(updateQuery, db.cn);
                 cmd.Parameters.AddWithValue("@Closing", model.FinalTotal);
                 cmd.Parameters.AddWithValue("@Date", date);
-
+                cmd.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
                 cmd.ExecuteNonQuery();
 
-                db.Disconnect();
+                //TEMP_TBL Status = 0
+                string tempQuery = @"
+UPDATE TOP(1) TEMP_TBL 
+SET Status = 0 
+WHERE CAST(Date AS DATE) = @Date
+AND Vibhag_id = @Outlet_id
+AND Status = 1";
 
+                SqlCommand cmdTemp = new SqlCommand(tempQuery, db.cn);
+                cmdTemp.Parameters.AddWithValue("@Date", date);
+                cmdTemp.Parameters.AddWithValue("@Outlet_id", model.Outlet_id);
+                cmdTemp.ExecuteNonQuery();
+
+                db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, "Day Closed Successfully");
+
             }
             catch (Exception ex)
             {

@@ -173,6 +173,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\LedgerBalanceController.cs" />
     <Compile Include="Controllers\LedgerController.cs" />
+    <Compile Include="Controllers\Ledger_reportController.cs" />
     <Compile Include="Controllers\OutletController.cs" />
     <Compile Include="Controllers\PrifixController.cs" />
     <Compile Include="Controllers\PurchaseTransactionController.cs" />
@@ -188,6 +189,7 @@
     <Compile Include="Controllers\StockGroupController.cs" />
     <Compile Include="Controllers\StockrateController.cs" />
     <Compile Include="Controllers\StockSubGroupController.cs" />
+    <Compile Include="Controllers\Stock_BookController.cs" />
     <Compile Include="Controllers\TalukaController.cs" />
     <Compile Include="Controllers\UnitController.cs" />
     <Compile Include="Controllers\UserController.cs" />
@@ -214,6 +216,7 @@
     <Compile Include="Models\GST_SLAB.cs" />
     <Compile Include="Models\LEDGER.cs" />
     <Compile Include="Models\LedgerBalance.cs" />
+    <Compile Include="Models\LedgerReportModel.cs" />
     <Compile Include="Models\LEDGER_GROUP.cs" />
     <Compile Include="Models\LEDGER_SETTING.cs" />
     <Compile Include="Models\LEDGER_SUBGROUP.cs" />
@@ -227,6 +230,7 @@
     <Compile Include="Models\SaleTransactionModel.cs" />
     <Compile Include="Models\Sanstha_Info.cs" />
     <Compile Include="Models\State_Master.cs" />
+    <Compile Include="Models\StockBookModel.cs" />
     <Compile Include="Models\STOCK_BALANCE.cs" />
     <Compile Include="Models\STOCK_DETAILS.cs" />
     <Compile Include="Models\STOCK_DISTRIBUTION.cs" />
