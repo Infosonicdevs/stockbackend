@@ -142,6 +142,7 @@ namespace Stock_Backend.Controllers
             }
         }
 
+
         [HttpGet]
         [Route("api/getBranches")]
         public HttpResponseMessage GetBranches()
@@ -167,6 +168,8 @@ namespace Stock_Backend.Controllers
             }
         }
 
+
+
         [HttpPost]
         [Route("api/verifySystemUser")]
         public HttpResponseMessage verifySystemUser([FromBody] System_User_Login request)
@@ -185,28 +188,28 @@ namespace Stock_Backend.Controllers
                 db.Connect();
 
                 string query = @"SELECT 
-	                                UL.User_id,
-	                                UL.Emp_id,
-	                                UL.User_name,
-	                                UL.Role_id,
-	                                UL.Log_in,
-	                                UL.Status,
-	                                RM.Role,
-	                                EI.Outlet_id,
-	                                (SELECT Outlet_name FROM OUTLET where Outlet_id = EI.Outlet_id) as Outlet_name
-                                FROM USER_LOGIN UL
-                                INNER JOIN ROLE_MASTER RM ON RM.Role_id = UL.Role_id
-                                INNER JOIN EMPLOYEE_INFO EI ON EI.Emp_id = UL.Emp_id
-                                WHERE 
-                                    UL.User_name = @UserName
-                                    AND UL.Password = @Password
-                                    AND RM.Role_id = 1";
+                            UL.User_id,
+                            UL.Emp_id,
+                            UL.User_name,
+                            UL.Role_id,
+                            UL.Log_in,
+                            UL.Status,
+                            RM.Role,
+                            EI.Outlet_id,
+                            (SELECT Outlet_name FROM OUTLET where Outlet_id = EI.Outlet_id) as Outlet_name
+                        FROM USER_LOGIN UL
+                        INNER JOIN ROLE_MASTER RM ON RM.Role_id = UL.Role_id
+                        INNER JOIN EMPLOYEE_INFO EI ON EI.Emp_id = UL.Emp_id
+                        WHERE 
+                            UL.User_name = @UserName
+                            AND UL.Password = @Password
+                            AND RM.Role_id = 1";
 
                 var parameters = new[]
                 {
-                    new SqlParameter("@UserName", request.Username),
-                    new SqlParameter("@Password", request.Password)
-                };
+            new SqlParameter("@UserName", request.Username),
+            new SqlParameter("@Password", request.Password)
+        };
 
                 var userResult = db.GetTable(query, parameters);
 
@@ -221,8 +224,10 @@ namespace Stock_Backend.Controllers
                             DateTimeStyles.None,
                             out dateInDateTime))
                     {
+                        db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid date format");
                     }
+
                     int outlet_id = Convert.ToInt32(userResult.Rows[0]["Outlet_id"]);
 
                     // Previous day close check
@@ -252,39 +257,101 @@ ORDER BY Date DESC";
                         });
                     }
 
+                    // Duplicate check
+                    string dupCheckQuery = @"
+SELECT COUNT(*) 
+FROM TEMP_TBL T
+WHERE 
+    T.Vibhag_id = @Outlet_id
+    AND CAST(T.Date AS DATE) = @Date
+    AND T.Status = 1
+    AND EXISTS (
+        SELECT 1 
+        FROM ASSIGN_COUNTER A
+        WHERE 
+            CAST(A.Login_date AS DATE) = @Date
+            AND ISNULL(A.Is_closed,0) = 0
+            AND A.Log_out_time IS NULL
+    )";
 
+                    SqlCommand dupCheckCmd = new SqlCommand(dupCheckQuery, db.cn);
+                    dupCheckCmd.Parameters.AddWithValue("@Outlet_id", outlet_id);
+                    dupCheckCmd.Parameters.AddWithValue("@Date", dateInDateTime);
 
-                    var result = db.ExecuteScalar(
-                        "INSERT INTO ASSIGN_COUNTER(Counter_id, Emp_id, Login_date, Status, Opn_bal, Closing_bal, Login_time) " +
-                        "VALUES(1, " + request.Emp_id + ", '" + dateInDateTime.ToString("yyyy-MM-dd") + "', 1, 0.00, 0.00, '" + DateTime.Now.ToString("HH:mm") + "'); " +
-                        "SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC;"
-                    );
+                    int alreadyExists = Convert.ToInt32(dupCheckCmd.ExecuteScalar());
 
-                    SqlCommand cmdTemp = new SqlCommand("Sp_Temp_Tbl", db.cn);
-                    cmdTemp.CommandType = CommandType.StoredProcedure;
-                    cmdTemp.Parameters.AddWithValue("@Vibhag_id", outlet_id);  
-                    cmdTemp.Parameters.AddWithValue("@Date", dateInDateTime);
-                    cmdTemp.Parameters.AddWithValue("@Status", "1");
-                    cmdTemp.ExecuteNonQuery();
-
-                    db.Disconnect(); 
-                    if (result != null)
+                    if (alreadyExists > 0)
                     {
-                        return Request.CreateResponse(HttpStatusCode.OK, new { success = true, data = result });
+                        db.Disconnect();
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                        {
+                            success = false,
+                            message = "Already logged in for this date!"
+                        });
+                    }
+
+                    //  TEMP_TBL insert
+                    string checkTemp = @"
+SELECT COUNT(*) FROM TEMP_TBL
+WHERE Vibhag_id = @Outlet_id
+AND CAST(Date AS DATE) = @Date";
+
+                    SqlCommand checkCmd2 = new SqlCommand(checkTemp, db.cn);
+                    checkCmd2.Parameters.AddWithValue("@Outlet_id", outlet_id);
+                    checkCmd2.Parameters.AddWithValue("@Date", dateInDateTime);
+
+                    int exists = Convert.ToInt32(checkCmd2.ExecuteScalar());
+
+                    if (exists > 0)
+                    {
+                        //  UPDATE existing row
+                        string updateTemp = @"
+  UPDATE TEMP_TBL
+SET Status = 1
+WHERE Vibhag_id = @Outlet_id
+AND CAST(Date AS DATE) = @Date";
+
+                        SqlCommand cmdUpdate = new SqlCommand(updateTemp, db.cn);
+                        cmdUpdate.Parameters.AddWithValue("@Outlet_id", outlet_id);
+                        cmdUpdate.Parameters.AddWithValue("@Date", dateInDateTime);
+                        cmdUpdate.ExecuteNonQuery();
                     }
                     else
                     {
-                        return Request.CreateResponse(HttpStatusCode.NotFound, new { success = false, data = request });
+                        //  INSERT new row
+                        SqlCommand cmdTemp = new SqlCommand("Sp_Temp_Tbl", db.cn);
+                        cmdTemp.CommandType = CommandType.StoredProcedure;
+                        cmdTemp.Parameters.AddWithValue("@Vibhag_id", outlet_id);
+                        cmdTemp.Parameters.AddWithValue("@Date", dateInDateTime);
+                        cmdTemp.Parameters.AddWithValue("@Status", "1");
+                        cmdTemp.ExecuteNonQuery();
                     }
+
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        success = true,
+                        data = dateInDateTime.ToString("yyyy-MM-dd")
+                    });
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, new { success = false, message = "Invalid Credentials! Check if Admin Role!", data = new DataTable() });
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, new
+                    {
+                        success = false,
+                        message = "Invalid Credentials! Check if Admin Role!"
+                    });
                 }
             }
             catch (Exception ex)
             {
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, new { success = false, message = ex.Message });
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
@@ -297,7 +364,11 @@ ORDER BY Date DESC";
             try
             {
                 db.Connect();
-                var result = db.GetTable("SELECT TOP 1 Login_date FROM ASSIGN_COUNTER ORDER BY Id DESC");
+                var result = db.GetTable(@"
+SELECT TOP 1 CAST(Date AS DATE) AS Login_date 
+FROM TEMP_TBL 
+WHERE Status = 1
+ORDER BY Date DESC");
                 db.Disconnect();
                 if (result.Rows.Count > 0)
                 {
@@ -352,7 +423,7 @@ ORDER BY Date DESC";
                 db.Connect();
                 if (db.IsValidUser(user.Created_by))
                 {
-                    if (!db.IsExists("select * from User_Login where User_name='"+user.User_name+"'"))
+                    if (!db.IsExists("select * from User_Login where User_name='" + user.User_name + "'"))
                     {
                         SqlCommand cmd = new SqlCommand("Sp_User_Login", db.cn);
                         cmd.CommandType = CommandType.StoredProcedure;
@@ -393,11 +464,11 @@ ORDER BY Date DESC";
 
                 if (db.IsAdmin(user.Created_by))
                 {
-                    if (!db.IsExists("select * from User_Login where User_name='"+user.User_name+"' and User_id!="+user.User_id+""))
+                    if (!db.IsExists("select * from User_Login where User_name='" + user.User_name + "' and User_id!=" + user.User_id + ""))
                     {
                         SqlCommand cmd = new SqlCommand("Sp_User_Login", db.cn);
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                        
+
                         cmd.Parameters.AddWithValue("@User_id", user.User_id);
                         cmd.Parameters.AddWithValue("@Emp_id", user.Emp_id);
                         cmd.Parameters.AddWithValue("@User_name", user.User_name);
@@ -438,7 +509,7 @@ ORDER BY Date DESC";
 
                 if (db.IsAdmin(user.Created_by))
                 {
-                    db.Execute("delete from USER_LOGIN where User_id="+user.User_id+"");
+                    db.Execute("delete from USER_LOGIN where User_id=" + user.User_id + "");
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.OK, "Record deleted");
                 }

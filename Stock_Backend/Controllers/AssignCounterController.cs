@@ -41,20 +41,15 @@ namespace Stock_Backend.Controllers
                 db.Connect();
                 if (db.IsAdmin(model.User_name))
                 {
-                    if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Login_date!='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1"))
+                    if (db.IsExists("SELECT * FROM ASSIGN_COUNTER WHERE Counter_id = " + model.Counter_id + " AND CAST(Login_date AS DATE) = '" + model.Login_date.ToString("yyyy-MM-dd") + "' AND ISNULL(Is_closed,0) = 0"))
                     {
                         db.Disconnect();
-                        return Request.CreateResponse(HttpStatusCode.BadRequest, "This counter is already loged on another day please logout!");
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Counter already running for this date! Please close first.");
                     }
-                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Status=1"))
+                    else if (db.IsExists("SELECT * FROM ASSIGN_COUNTER WHERE Emp_id = " + model.Emp_id + " AND CAST(Login_date AS DATE) = '" + model.Login_date.ToString("yyyy-MM-dd") + "' AND ISNULL(Is_closed,0) = 0"))
                     {
                         db.Disconnect();
-                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Counter already Active!");
-                    }
-                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Emp_id='" + model.Emp_id + "' and Login_date='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1"))
-                    {
-                        db.Disconnect();
-                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Employee already logged on Date!");
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Employee already working on this date!");
                     }
                     else
                     {
@@ -72,7 +67,8 @@ namespace Stock_Backend.Controllers
                         cmd.ExecuteNonQuery();
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.OK, "Counter Assigned Successfully!");
-                    }
+                    
+                }
                 }
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User!");
@@ -95,17 +91,17 @@ namespace Stock_Backend.Controllers
                 db.Connect();
                 if (db.IsAdmin(model.User_name))
                 {
-                    if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Login_date!='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1 and Id !="+model.Id+""))
+                    if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Login_date!='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1 and Id !=" + model.Id + ""))
                     {
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "This counter is already loged on another day please logout!");
                     }
-                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Status=1 and Id !="+model.Id+""))
+                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Counter_id='" + model.Counter_id + "' and Status=1 and Id !=" + model.Id + ""))
                     {
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Counter already Active!");
                     }
-                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Emp_id='" + model.Emp_id + "' and Login_date='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1 and Id !="+model.Id+""))
+                    else if (db.IsExists("Select * from VIEW_ASSIGN_COUNTER where Emp_id='" + model.Emp_id + "' and Login_date='" + model.Login_date.ToString("MM/dd/yyyy") + "' and Status=1 and Id !=" + model.Id + ""))
                     {
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Employee already logged on Date!");
@@ -133,7 +129,7 @@ namespace Stock_Backend.Controllers
                 }
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User!");
-           
+
             }
             catch (Exception ex)
             {
@@ -150,7 +146,7 @@ namespace Stock_Backend.Controllers
             try
             {
                 db.Connect();
-                if (db.IsAdmin(model.User_name)) 
+                if (db.IsAdmin(model.User_name))
                 {
                     SqlCommand cmd = new SqlCommand("dbo.Sp_Assign_Counter_dlt", db.cn);
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
