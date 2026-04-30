@@ -75,6 +75,35 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        //public List<BazaSetting> GetBazarSetting()
+        //{
+        //    try
+        //    {
+        //        var result = db.GetTable("select * from VIEW_BAZAR_SETTING");
+        //        var list = new List<BazaSetting>();
+        //        foreach (DataRow row in result.Rows)
+        //        {
+        //            list.Add(new BazaSetting
+        //            {
+        //                Pur_id = Convert.ToDecimal(row["Pur_id"]),
+        //                Round_Off_id = Convert.ToDecimal(row["Round_Off_id"]),
+        //                Hamali_id = Convert.ToDecimal(row["Hamali_id"]),
+        //                Commi_id = Convert.ToDecimal(row["Commi_id"]),
+        //                Transport_id = Convert.ToDecimal(row["Transport_id"]),
+        //                Ma_ses_id = Convert.ToDecimal(row["Ma_ses_id"]),
+        //                Tcs_id = Convert.ToDecimal(row["Tcs_id"]),
+        //                Net_Disc_id = Convert.ToDecimal(row["Net_Disc_id"]),
+        //                Transfer_id = Convert.ToDecimal(row["Transfer_id"])
+        //            });
+        //        }
+        //        return list;
+        //    }
+        //    catch
+        //    {
+        //        return new List<BazaSetting>();
+        //    }
+        //}
+
         [HttpPost]
         [Route("api/SaleTransaction")]
         public HttpResponseMessage PostSaleTransaction([FromBody] SaleTransactionModel request)
@@ -82,6 +111,17 @@ namespace Stock_Backend.Controllers
             try
             {
                 db.Connect();
+
+                SqlCommand cmdSetting = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose = 'Sale account'", db.cn);
+                object saleL = cmdSetting.ExecuteScalar();
+                if (saleL == null || saleL == DBNull.Value)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale account not found in Bazar Setting");
+                }
+                int Sale_L_id = Convert.ToInt32(saleL);
+
+
                 if (!db.IsValidUser(request.User))
                 {
                     db.Disconnect();
@@ -141,12 +181,12 @@ namespace Stock_Backend.Controllers
 
                         // TRANS
                         cmd.Parameters.AddWithValue("@Year_id", request.Year_id);
-                        cmd.Parameters.AddWithValue("@Trans_type_id", request.Trans_type_id);
+                        cmd.Parameters.AddWithValue("@Trans_type_id", 2);
                         cmd.Parameters.AddWithValue("@trans_code", request.trans_code);
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        cmd.Parameters.AddWithValue("@Sale_L_id", request.Sale_L_id);
+                        cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
@@ -239,6 +279,15 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
+                SqlCommand cmdSetting = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose = 'Sale account'", db.cn);
+                object saleL = cmdSetting.ExecuteScalar();
+                if (saleL == null || saleL == DBNull.Value)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale account not found in Bazar Setting");
+                }
+                int Sale_L_id = Convert.ToInt32(saleL);
+
                 if (!db.IsAdmin(request.User))
                 {
                     db.Disconnect();
@@ -299,14 +348,14 @@ namespace Stock_Backend.Controllers
 
                         // TRANS UPDATE
                         cmd.Parameters.AddWithValue("@Year_id", request.Year_id);
-                        cmd.Parameters.AddWithValue("@Trans_type_id", request.Trans_type_id);
+                        cmd.Parameters.AddWithValue("@Trans_type_id", 2);
                         cmd.Parameters.AddWithValue("@trans_code", request.trans_code);
                         cmd.Parameters.AddWithValue("@update_trans_id", request.Trans_id);
                         cmd.Parameters.AddWithValue("@Modify_reason", request.Modify_reason);
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        cmd.Parameters.AddWithValue("@Sale_L_id", request.Sale_L_id);
+                     cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
@@ -398,6 +447,7 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
+
 
         [HttpPost]
         [Route("api/DeleteSale")]

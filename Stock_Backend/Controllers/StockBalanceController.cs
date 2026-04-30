@@ -15,12 +15,15 @@ namespace Stock_Backend.Controllers
 
         #region StockBalance
         [Route("api/StockBalance")]
-        public HttpResponseMessage GetStockBalance()
+        public HttpResponseMessage GetStockBalance(int? Outlet_id = null)
         {
             try
             {
                 db.Connect();
-                var result = db.GetTable("Select * from VIEW_STOCK_BALANCE");
+                string query = "Select * from VIEW_STOCK_BALANCE";
+                if (Outlet_id != null)
+                    query += " WHERE Outlet_id = " + Outlet_id;
+                var result = db.GetTable(query);
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
@@ -79,6 +82,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Disc", 0);
                         cmd.Parameters.AddWithValue("@Pur_amt", 0);
                         cmd.Parameters.AddWithValue("@Rate", 0);
+                        cmd.Parameters.AddWithValue("@Outlet_id", sTOCK_BALANCE.Outlet_id);
                         cmd.Parameters.AddWithValue("@txt", 1);
                         cmd.ExecuteNonQuery();
                         db.Disconnect();
@@ -128,6 +132,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Disc", 0);
                         cmd.Parameters.AddWithValue("@Pur_amt", 0);
                         cmd.Parameters.AddWithValue("@Rate", 0);
+                        cmd.Parameters.AddWithValue("@Outlet_id", sTOCK_BALANCE.Outlet_id);
                         cmd.Parameters.AddWithValue("@txt", 2);
                         cmd.ExecuteNonQuery();
                         db.Disconnect();

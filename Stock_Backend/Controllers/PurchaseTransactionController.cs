@@ -67,25 +67,27 @@ namespace Stock_Backend.Controllers
         {
             try
             {
-                var result = db.GetTable("select * from VIEW_BAZAR_SETTING");
+                var result = db.GetTable("SELECT Purpose, L_id FROM Bazar_Settg");
+
+                decimal GetId(string purpose)
+                {
+                    var row = result.AsEnumerable().FirstOrDefault(r => r["Purpose"].ToString() == purpose);
+                    return row != null && row["L_id"] != DBNull.Value ? Convert.ToDecimal(row["L_id"]) : 0;
+                }
 
                 var list = new List<BazaSetting>();
-
-                foreach (DataRow row in result.Rows)
+                list.Add(new BazaSetting
                 {
-                    list.Add(new BazaSetting
-                    {
-                        Pur_id = Convert.ToDecimal(row["Pur_id"]),
-                        Round_Off_id = Convert.ToDecimal(row["Round_Off_id"]),
-                        Hamali_id = Convert.ToDecimal(row["Hamali_id"]),
-                        Commi_id = Convert.ToDecimal(row["Commi_id"]),
-                        Transport_id = Convert.ToDecimal(row["Transport_id"]),
-                        Ma_ses_id = Convert.ToDecimal(row["Ma_ses_id"]),
-                        Tcs_id = Convert.ToDecimal(row["Tcs_id"]),
-                        Net_Disc_id = Convert.ToDecimal(row["Net_Disc_id"]),
-                        Transfer_id = Convert.ToDecimal(row["Transfer_id"])
-                    });
-                }
+                    Pur_id = GetId("Purchase account"),
+                    Round_Off_id = GetId("Round off account"),
+                    Hamali_id = GetId("Hamali account"),
+                    Commi_id = GetId("Commission account"),
+                    Transport_id = GetId("Transport rent account"),
+                    Ma_ses_id = GetId("Ma.Ses. charges"),
+                    Tcs_id = GetId("T.C.S. account"),
+                    Net_Disc_id = GetId("Net discount"),
+                    Transfer_id = GetId("Transfer account")
+                });
 
                 return list;
             }
@@ -94,7 +96,6 @@ namespace Stock_Backend.Controllers
                 return new List<BazaSetting>();
             }
         }
-
 
         [Route("api/PurchaseTransaction")]
         [HttpPost]
@@ -132,8 +133,8 @@ namespace Stock_Backend.Controllers
 
                                     //Purchase
                                     cmd.CommandType = CommandType.StoredProcedure;
-                                    cmd.Parameters.AddWithValue("@Invoice_date", Convert.ToDateTime(request.Invoice_date.ToString("MM-dd-yyyy")));
-                                    cmd.Parameters.AddWithValue("@Bill_date", Convert.ToDateTime(request.Bill_date.ToString("MM-dd-yyyy")));
+                                    cmd.Parameters.AddWithValue("@Invoice_date", request.Invoice_date);
+                                    cmd.Parameters.AddWithValue("@Bill_date", request.Bill_date);
                                     cmd.Parameters.AddWithValue("@Vend_id", request.Vend_id);
                                     cmd.Parameters.AddWithValue("@Roundoff", request.RoundOFF);
                                     cmd.Parameters.AddWithValue("@Roundoff_id", bazar_setting_id[0].Round_Off_id);
@@ -226,7 +227,7 @@ namespace Stock_Backend.Controllers
                                         cmd.Parameters.AddWithValue("@Mode", purchase.Mode);
 
                                         //GS_INWARD 
-                                        cmd.Parameters.AddWithValue("@Date", Convert.ToDateTime(request.Invoice_date.ToString("MM-dd-yyyy")));
+                                        cmd.Parameters.AddWithValue("@Date", request.Invoice_date);
                                         cmd.Parameters.AddWithValue("@Amount", purchase.Total);
                                         cmd.Parameters.AddWithValue("@Is_new", '1');
                                         cmd.Parameters.AddWithValue("@Return_id", 0);
@@ -301,8 +302,8 @@ namespace Stock_Backend.Controllers
                                     //Purchase
                                     cmd.CommandType = CommandType.StoredProcedure;
                                     cmd.Parameters.AddWithValue("@update_invoice_id", request.Invoice_id);
-                                    cmd.Parameters.AddWithValue("@Invoice_date", Convert.ToDateTime(request.Invoice_date.ToString("MM-dd-yyyy")));
-                                    cmd.Parameters.AddWithValue("@Bill_date", Convert.ToDateTime(request.Bill_date.ToString("MM-dd-yyyy")));
+                                    cmd.Parameters.AddWithValue("@Invoice_date", request.Invoice_date);
+                                    cmd.Parameters.AddWithValue("@Bill_date", request.Bill_date);
                                     cmd.Parameters.AddWithValue("@Vend_id", request.Vend_id);
                                     cmd.Parameters.AddWithValue("@Roundoff", request.RoundOFF);
                                     cmd.Parameters.AddWithValue("@Roundoff_id", bazar_setting_id[0].Round_Off_id);

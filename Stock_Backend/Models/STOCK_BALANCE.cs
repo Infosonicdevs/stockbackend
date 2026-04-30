@@ -11,6 +11,8 @@ namespace Stock_Backend.Models
         public int Stock_id { get; set; }
         public decimal Quantity { get; set; }
         public decimal Amount { get; set; }
+        public decimal Outlet_id { get; set; }
+
         public string Created_By { get; set; }
         public string Modified_By { get;set; }
     }

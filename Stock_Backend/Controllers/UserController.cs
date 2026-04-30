@@ -112,10 +112,35 @@ namespace Stock_Backend.Controllers
                 };
 
                 var result = db.GetTable(query, parameters);
-                db.Disconnect();
-
                 if (result.Rows.Count > 0)
                 {
+                    int empId = Convert.ToInt32(result.Rows[0]["Emp_id"]);
+                    int roleId = Convert.ToInt32(result.Rows[0]["Role_id"]);
+
+                    // check counter assign to employe 
+                    if (roleId != 1)
+                    {
+                        string counterCheck = @"
+SELECT COUNT(*) FROM ASSIGN_COUNTER
+WHERE Emp_id = @Emp_id
+AND ISNULL(Is_closed, 0) = 0
+AND Status = 1";
+
+                        SqlCommand counterCmd = new SqlCommand(counterCheck, db.cn);
+                        counterCmd.Parameters.AddWithValue("@Emp_id", empId);
+                        int assigned = Convert.ToInt32(counterCmd.ExecuteScalar());
+
+                        if (assigned == 0)
+                        {
+                            db.Disconnect();
+                            return Request.CreateResponse(HttpStatusCode.Unauthorized, new
+                            {
+                                success = false,
+                                message = "Counter not assigned. Please contact Admin!"
+                            });
+                        }
+                    }
+
                     return Request.CreateResponse(HttpStatusCode.OK, new
                     {
                         success = true,
@@ -124,6 +149,7 @@ namespace Stock_Backend.Controllers
                 }
                 else
                 {
+                    db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.Unauthorized, new
                     {
                         success = false,

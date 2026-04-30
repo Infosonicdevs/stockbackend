@@ -32,6 +32,72 @@ namespace Stock_Backend.Controllers
 
         }
 
+        [HttpGet]
+        [Route("api/AssignCounter/ByEmployee")]
+        public HttpResponseMessage GetCounterByEmployee(int Emp_id)
+        {
+            try
+            {
+                db.Connect();
+
+                string query = @"
+SELECT c.Counter_id, c.Counter_name
+FROM COUNTER c
+INNER JOIN EMPLOYEE_INFO e ON e.Outlet_id = c.Outlet_id
+WHERE e.Emp_id = @Emp_id";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@Emp_id", Emp_id);
+
+                System.Data.DataTable dt = new System.Data.DataTable();
+                new System.Data.SqlClient.SqlDataAdapter(cmd).Fill(dt);
+
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, dt);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        [HttpGet]
+        [Route("api/AssignCounter/CheckLogin")]
+        public HttpResponseMessage CheckEmployeeLogin(int Emp_id)
+        {
+            try
+            {
+                db.Connect();
+
+                string query = @"
+SELECT TOP 1 ac.Id, ac.Counter_id, ac.Login_date, c.Counter_name
+FROM ASSIGN_COUNTER ac
+INNER JOIN COUNTER c ON c.Counter_Id = ac.Counter_id
+WHERE ac.Emp_id = @Emp_id
+AND ISNULL(ac.Is_closed, 0) = 0
+AND ac.Status = 1";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@Emp_id", Emp_id);
+
+                System.Data.DataTable dt = new System.Data.DataTable();
+                new System.Data.SqlClient.SqlDataAdapter(cmd).Fill(dt);
+
+                db.Disconnect();
+
+                if (dt.Rows.Count > 0)
+                    return Request.CreateResponse(HttpStatusCode.OK, new { IsLoggedIn = true, Data = dt });
+                else
+                    return Request.CreateResponse(HttpStatusCode.OK, new { IsLoggedIn = false });
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
         [HttpPost]
         [Route("api/AssignCounter")]
         public HttpResponseMessage PostAssignCounter([FromBody] AssignCounter model)
