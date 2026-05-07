@@ -27,7 +27,7 @@ namespace Stock_Backend.Controllers
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
@@ -42,9 +42,9 @@ namespace Stock_Backend.Controllers
                 db.Connect();
                 var result = db.GetTable("Select * from VIEW_STOCK_BALANCE where Bal_id = " + Bal_id);
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.OK,result);
+                return Request.CreateResponse(HttpStatusCode.OK, result);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
@@ -52,15 +52,17 @@ namespace Stock_Backend.Controllers
         }
 
         [Route("api/StockBalance")]
-        public HttpResponseMessage PostStockBalance([FromBody]STOCK_BALANCE sTOCK_BALANCE)
+        public HttpResponseMessage PostStockBalance([FromBody] STOCK_BALANCE sTOCK_BALANCE)
         {
             try
             {
                 db.Connect();
 
-                if(db.IsValidUser(sTOCK_BALANCE.Created_By))
+                if (db.IsValidUser(sTOCK_BALANCE.Created_By))
                 {
-                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = " + sTOCK_BALANCE.Stock_id))
+                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = "
+        + sTOCK_BALANCE.Stock_id +
+        " AND Outlet_id = " + sTOCK_BALANCE.Outlet_id))
                     {
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Stock balance already exists");
@@ -93,7 +95,7 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User");
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
@@ -101,7 +103,7 @@ namespace Stock_Backend.Controllers
         }
 
         [Route("api/StockBalance")]
-        public HttpResponseMessage PutStockBalance([FromBody]STOCK_BALANCE sTOCK_BALANCE)
+        public HttpResponseMessage PutStockBalance([FromBody] STOCK_BALANCE sTOCK_BALANCE)
         {
             try
             {
@@ -109,7 +111,10 @@ namespace Stock_Backend.Controllers
 
                 if (db.IsAdmin(sTOCK_BALANCE.Modified_By))
                 {
-                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = " + sTOCK_BALANCE.Stock_id + " and Bal_id != " + sTOCK_BALANCE.Bal_id))
+                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = "
+     + sTOCK_BALANCE.Stock_id +
+     " AND Outlet_id = " + sTOCK_BALANCE.Outlet_id +
+     " AND Bal_id != " + sTOCK_BALANCE.Bal_id))
                     {
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.BadRequest, "Stock balance already exists");
@@ -151,7 +156,7 @@ namespace Stock_Backend.Controllers
 
         [Route("api/DelStockBalance")]
         [HttpPost]
-        public HttpResponseMessage DeleteStockBalance([FromBody]STOCK_BALANCE sTOCK_BALANCE)
+        public HttpResponseMessage DeleteStockBalance([FromBody] STOCK_BALANCE sTOCK_BALANCE)
         {
             try
             {
