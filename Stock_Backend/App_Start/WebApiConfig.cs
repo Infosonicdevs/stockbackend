@@ -13,7 +13,7 @@ namespace Stock_Backend
             // Web API configuration and services
 
             // Web API routes
-            var cors = new EnableCorsAttribute("*", "*", "*");
+            var cors = new EnableCorsAttribute("http://stock.infosonic.in,http://stock.dev.infosonic.in", "*", "*");
             config.EnableCors(cors);
 
             config.MapHttpAttributeRoutes();
