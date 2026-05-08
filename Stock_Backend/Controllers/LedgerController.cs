@@ -115,7 +115,7 @@ namespace Stock_Backend.Controllers
                     {
                         if (!db.IsExists("Select Ledger_no from ledger where Ledger_no =" + ledger.Ledger_no + " and Ledger_id!=" + ledger.Ledger_id + ""))
                         {
-                            db.Execute("update LEDGER set Ledger_no =" + ledger.Ledger_no + ", Ledger_name ='" + ledger.Ledger_name + "', Ledger_name_RL =N'" + ledger.Ledger_name_RL + "', Ledger_group_id =" + ledger.Ledger_group_id + ", Ledger_subgroup_id =" + ledger.Ledger_subgroup_id + ", Ledger_type =" + ledger.Ledger_type + ", Is_personal =" + ledger.Is_personal + ", Cust_type_id =" + ledger.Cust_type_id + ", Accountable =" + ledger.Accountable + ", Status =" + ledger.Status + ", Modified_by ='" + ledger.Modified_by + "', Modified_date ='" + DateTime.Now.ToString("MM-dd-yyyy") + "' where Ledger_id= " + ledger.Ledger_id + "");
+                            db.Execute("update LEDGER set Ledger_no =" + ledger.Ledger_no + ", Ledger_name ='" + ledger.Ledger_name + "', Ledger_name_EN =N'" + ledger.Ledger_name_EN + "', Ledger_group_id =" + ledger.Ledger_group_id + ", Ledger_subgroup_id =" + ledger.Ledger_subgroup_id + ", Ledger_type =" + ledger.Ledger_type + ", Is_personal =" + ledger.Is_personal + ", Cust_type_id =" + ledger.Cust_type_id + ", Accountable =" + ledger.Accountable + ", Status =" + ledger.Status + ", Modified_by ='" + ledger.Modified_by + "', Modified_date ='" + DateTime.Now.ToString("MM-dd-yyyy") + "' where Ledger_id= " + ledger.Ledger_id + "");
                             db.Disconnect();
                             return Request.CreateResponse(HttpStatusCode.OK, "Record Updated");
                         }
@@ -156,7 +156,7 @@ namespace Stock_Backend.Controllers
                     {
                         if (!db.IsExists("Select Ledger_no from ledger where Ledger_no =" + ledger.Ledger_no))
                         {
-                            db.Execute("insert into ledger(Ledger_no, Ledger_name , Ledger_name_RL , Ledger_group_id, Ledger_subgroup_id , Ledger_type , Is_personal , Cust_type_id , Accountable , Status , Created_by , Created_date) values (" + ledger.Ledger_no + ",'" + ledger.Ledger_name + "',N'" + ledger.Ledger_name_RL + "'," + ledger.Ledger_group_id + "," + ledger.Ledger_subgroup_id + "," + ledger.Ledger_type + "," + ledger.Is_personal + "," + ledger.Cust_type_id + "," + ledger.Accountable + "," + ledger.Status + ",'" + ledger.Created_by + "','" + DateTime.Now.ToString("MM-dd-yyyy") + "') ");
+                            db.Execute("insert into ledger(Ledger_no, Ledger_name , Ledger_name_EN , Ledger_group_id, Ledger_subgroup_id , Ledger_type , Is_personal , Cust_type_id , Accountable , Status , Created_by , Created_date) values (" + ledger.Ledger_no + ",'" + ledger.Ledger_name + "',N'" + ledger.Ledger_name_EN + "'," + ledger.Ledger_group_id + "," + ledger.Ledger_subgroup_id + "," + ledger.Ledger_type + "," + ledger.Is_personal + "," + ledger.Cust_type_id + "," + ledger.Accountable + "," + ledger.Status + ",'" + ledger.Created_by + "','" + DateTime.Now.ToString("MM-dd-yyyy") + "') ");
                             db.Disconnect();
                             return Request.CreateResponse(HttpStatusCode.OK, "Record Inserted");
                         }
@@ -318,7 +318,7 @@ namespace Stock_Backend.Controllers
                     DataTable dt1 = db.GetTable("Select * from LEDGER_GROUP where L_group_name ='" + l_group.L_group_name + "' and L_group_id!=" + l_group.L_group_id + "");
                     if (dt1.Rows.Count == 0)
                     {
-                        db.Execute("update LEDGER_GROUP set L_group_name ='" + l_group.L_group_name + "', L_group_name_RL =N'" + l_group.L_group_name_RL + "', Patrak_id =" + l_group.Patrak_id + ", crdr_id = " + l_group.crdr_id + ", Seqno = " + l_group.Seqno + ",Code = '" + l_group.Code + "' where L_group_id = " + l_group.L_group_id + "");
+                        db.Execute("update LEDGER_GROUP set L_group_name ='" + l_group.L_group_name + "', L_group_name_EN =N'" + l_group.L_group_name_EN + "', Patrak_id =" + l_group.Patrak_id + ", crdr_id = " + l_group.crdr_id + ", Seqno = " + l_group.Seqno + ",Code = '" + l_group.Code + "' where L_group_id = " + l_group.L_group_id + "");
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.OK, "Record Updated");
                     }
@@ -351,7 +351,7 @@ namespace Stock_Backend.Controllers
 
                     if (db.GetTable("Select * from LEDGER_GROUP where L_group_name ='" + l_group.L_group_name + "'").Rows.Count == 0)
                     {
-                        db.Execute("insert into LEDGER_GROUP(L_group_name, L_group_name_RL, Patrak_id, crdr_id, Seqno, Code) values('" + l_group.L_group_name + "',N'" + l_group.L_group_name_RL + "'," + l_group.Patrak_id + "," + l_group.crdr_id + "," + l_group.Seqno + ",'" + l_group.Code + "')");
+                        db.Execute("insert into LEDGER_GROUP(L_group_name, L_group_name_EN, Patrak_id, crdr_id, Seqno, Code) values('" + l_group.L_group_name + "',N'" + l_group.L_group_name_EN + "'," + l_group.Patrak_id + "," + l_group.crdr_id + "," + l_group.Seqno + ",'" + l_group.Code + "')");
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.OK, "Record Inserted");
                     }
@@ -538,7 +538,7 @@ namespace Stock_Backend.Controllers
                     DataTable dt1 = db.GetTable("Select * from LEDGER_SUBGROUP where Ledger_subgroup_name ='" + ls_group.Ledger_subgroup_name + "' and Ledger_subgroup_id!=" + ls_group.Ledger_subgroup_id + "");
                     if (dt1.Rows.Count == 0)
                     {
-                        db.Execute("Update LEDGER_SUBGROUP set Ledger_subgroup_name ='"+ ls_group.Ledger_subgroup_name + "', Ledger_subgroup_name_RL =N'"+ ls_group.Ledger_subgroup_name_RL + "', Ledger_group_id ="+ ls_group.Ledger_group_id + ", Seqno ="+ ls_group.Seqno + ", Code ='"+ ls_group.Code + "' where Ledger_subgroup_id ="+ ls_group.Ledger_subgroup_id + "");
+                        db.Execute("Update LEDGER_SUBGROUP set Ledger_subgroup_name ='"+ ls_group.Ledger_subgroup_name + "', Ledger_subgroup_name_EN =N'"+ ls_group.Ledger_subgroup_name_EN + "', Ledger_group_id ="+ ls_group.Ledger_group_id + ", Seqno ="+ ls_group.Seqno + ", Code ='"+ ls_group.Code + "' where Ledger_subgroup_id ="+ ls_group.Ledger_subgroup_id + "");
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.OK, "Record Updated");
                     }
@@ -572,7 +572,7 @@ namespace Stock_Backend.Controllers
                     DataTable dt1 = db.GetTable("Select * from LEDGER_SUBGROUP where Ledger_subgroup_name ='" + ls_group.Ledger_subgroup_name + "'");
                     if (dt1.Rows.Count == 0)
                     {
-                        db.Execute("insert into LEDGER_SUBGROUP(Ledger_subgroup_name, Ledger_subgroup_name_RL, Ledger_group_id, Seqno, Code) values ('" + ls_group.Ledger_subgroup_name + "',N'" + ls_group.Ledger_subgroup_name_RL + "'," + ls_group.Ledger_group_id + "," + ls_group.Seqno + ",'" + ls_group.Code + "')");
+                        db.Execute("insert into LEDGER_SUBGROUP(Ledger_subgroup_name, Ledger_subgroup_name_EN, Ledger_group_id, Seqno, Code) values ('" + ls_group.Ledger_subgroup_name + "',N'" + ls_group.Ledger_subgroup_name_EN + "'," + ls_group.Ledger_group_id + "," + ls_group.Seqno + ",'" + ls_group.Code + "')");
                         db.Disconnect();
                         return Request.CreateResponse(HttpStatusCode.OK, "Record Inserted");
                     }

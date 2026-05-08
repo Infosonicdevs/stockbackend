@@ -9,7 +9,7 @@ namespace Stock_Backend.Models
     {
         public int L_group_id { get; set; }
         public string L_group_name { get; set; }
-        public string L_group_name_RL { get; set; }
+        public string L_group_name_EN { get; set; }
         public int Patrak_id { get; set; }
         public Nullable<byte> crdr_id { get; set; }
         public Nullable<int> Seqno { get; set; }

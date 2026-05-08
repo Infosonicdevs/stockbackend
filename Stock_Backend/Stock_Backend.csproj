@@ -177,9 +177,11 @@
     <Compile Include="Controllers\OutletController.cs" />
     <Compile Include="Controllers\PrifixController.cs" />
     <Compile Include="Controllers\PurchaseTransactionController.cs" />
+    <Compile Include="Controllers\Purchase_RegisterController.cs" />
     <Compile Include="Controllers\Purchase_ReturnController.cs" />
     <Compile Include="Controllers\RoleController.cs" />
     <Compile Include="Controllers\SaleTransactionController.cs" />
+    <Compile Include="Controllers\Sale_Register.cs" />
     <Compile Include="Controllers\Sale_ReturnController.cs" />
     <Compile Include="Controllers\SansthaController.cs" />
     <Compile Include="Controllers\StateController.cs" />

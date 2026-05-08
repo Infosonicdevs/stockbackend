@@ -11,7 +11,7 @@ namespace Stock_Backend.Models
         public int Ledger_id { get; set; }
         public int Ledger_no { get; set; }
         public string Ledger_name { get; set; }
-        public string Ledger_name_RL { get; set; }
+        public string Ledger_name_EN { get; set; }
         public int Ledger_group_id { get; set; }
         public int Ledger_subgroup_id { get; set; }
         public int Ledger_type { get; set; }
