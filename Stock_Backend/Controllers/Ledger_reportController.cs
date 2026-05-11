@@ -54,6 +54,7 @@ SELECT
     td.CrDr_id,
     td.Narr,
     l.Ledger_name,
+l.Ledger_name_EN,
     CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END AS CR_Amount,
     CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END AS DR_Amount
 FROM TRANS t

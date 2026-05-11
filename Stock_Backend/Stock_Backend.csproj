@@ -193,6 +193,7 @@
     <Compile Include="Controllers\StockSubGroupController.cs" />
     <Compile Include="Controllers\Stock_BookController.cs" />
     <Compile Include="Controllers\TalukaController.cs" />
+    <Compile Include="Controllers\TrialBalanceController.cs" />
     <Compile Include="Controllers\UnitController.cs" />
     <Compile Include="Controllers\UserController.cs" />
     <Compile Include="Controllers\VendorBalanceController.cs" />
