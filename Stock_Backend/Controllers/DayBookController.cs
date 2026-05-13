@@ -28,7 +28,7 @@ namespace Stock_Backend.Controllers
 SELECT 
     l.Ledger_id,
     l.Ledger_no,
-    l.Ledger_name,
+    l.Ledger_name_EN,
  td.CrDr_id,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
@@ -41,7 +41,7 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name, td.CrDr_id ORDER BY l.Ledger_no";
+                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name_EN, td.CrDr_id ORDER BY l.Ledger_no";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -113,7 +113,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                     {
                         Ledger_id = row["Ledger_id"],
                         Ledger_no = row["Ledger_no"],
-                        Ledger_name = row["Ledger_name"],
+                        Ledger_name_EN = row["Ledger_name_EN"],
                         CrDr_id = row["CrDr_id"],
                         CR_Amount = row["CR_Amount"],
                         DR_Amount = row["DR_Amount"]
@@ -155,7 +155,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
 SELECT 
     l.Ledger_id,
     l.Ledger_no,
-    l.Ledger_name,
+    l.Ledger_name_EN,
  td.CrDr_id,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
@@ -168,7 +168,7 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name, td.CrDr_id ORDER BY l.Ledger_no";
+                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name_EN, td.CrDr_id ORDER BY l.Ledger_no";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -241,7 +241,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                     {
                         Ledger_id = row["Ledger_id"],
                         Ledger_no = row["Ledger_no"],
-                        Ledger_name = row["Ledger_name"],
+                        Ledger_name_EN = row["Ledger_name_EN"],
                         CrDr_id = row["CrDr_id"],
                         CR_Amount = row["CR_Amount"],
                         DR_Amount = row["DR_Amount"]
@@ -283,7 +283,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
 SELECT 
     l.Ledger_id,
     l.Ledger_no,
-    l.Ledger_name,
+    l.Ledger_name_EN,
     t.Trans_id,
     t.Trans_date,
     t.Trans_no,
@@ -381,7 +381,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                     .GroupBy(r => new {
                         Ledger_id = r["Ledger_id"],
                         Ledger_no = r["Ledger_no"],
-                        Ledger_name = r["Ledger_name"]
+                        Ledger_name_EN = r["Ledger_name_EN"]
                     });
 
                 foreach (var group in ledgerGroups)
@@ -409,7 +409,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                     {
                         Ledger_id = group.Key.Ledger_id,
                         Ledger_no = group.Key.Ledger_no,
-                        Ledger_name = group.Key.Ledger_name,
+                        Ledger_name_EN = group.Key.Ledger_name_EN,
                         Total_CR = group.Sum(r => Convert.ToDecimal(r["CR_Amount"])),
                         Total_DR = group.Sum(r => Convert.ToDecimal(r["DR_Amount"])),
                         Entries = entries

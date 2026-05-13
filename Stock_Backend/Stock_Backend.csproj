@@ -157,6 +157,7 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\AssignCounterController.cs" />
+    <Compile Include="Controllers\Balance_SheetController.cs" />
     <Compile Include="Controllers\BankAccSettingController.cs" />
     <Compile Include="Controllers\BankOpnController.cs" />
     <Compile Include="Controllers\BazarSettingsController.cs" />
@@ -192,6 +193,7 @@
     <Compile Include="Controllers\StockrateController.cs" />
     <Compile Include="Controllers\StockSubGroupController.cs" />
     <Compile Include="Controllers\Stock_BookController.cs" />
+    <Compile Include="Controllers\Stock_distribution_reportController.cs" />
     <Compile Include="Controllers\TalukaController.cs" />
     <Compile Include="Controllers\TrialBalanceController.cs" />
     <Compile Include="Controllers\UnitController.cs" />
