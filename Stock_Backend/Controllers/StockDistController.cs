@@ -292,6 +292,65 @@ ORDER BY sd.Batch_no DESC";
             }
         }
 
+
+        [Route("api/StockDistSummary/{BatchNo}")]
+        [HttpGet]
+        public HttpResponseMessage GetStockDistSummary(string BatchNo)
+        {
+            try
+            {
+                db.Connect();
+                string query = @"
+SELECT 
+    sd.Outlet_id,
+    sd.Batch_no,
+    CAST(sd.Date AS DATE) AS Date,
+    SUM(sd.Quantity) AS Total_Quantity,
+    SUM(sd.Amount) AS Total_Amount
+FROM STOCK_DISTRIBUTION sd
+WHERE sd.Batch_no = @BatchNo
+GROUP BY 
+    sd.Outlet_id,
+    sd.Batch_no,
+    CAST(sd.Date AS DATE)";
+
+                var result = db.GetTable(query, new SqlParameter[] {
+            new SqlParameter("@BatchNo", BatchNo)
+        });
+                db.Disconnect();
+
+                if (result.Rows.Count > 0)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        success = true,
+                        Outlet_id = result.Rows[0]["Outlet_id"],
+                        Batch_no = result.Rows[0]["Batch_no"],
+                        Date = Convert.ToDateTime(result.Rows[0]["Date"]).ToString("yyyy-MM-dd"),
+                        Total_Quantity = result.Rows[0]["Total_Quantity"],
+                        Total_Amount = result.Rows[0]["Total_Amount"]
+                    });
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, new
+                    {
+                        success = false,
+                        message = "Batch Not Found"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
         [HttpDelete]
         [Route("api/DeleteStockDistribution")]
         public HttpResponseMessage DeleteStockDistribution(string BatchNo)
