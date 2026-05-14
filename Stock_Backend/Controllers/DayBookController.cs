@@ -26,22 +26,22 @@ namespace Stock_Backend.Controllers
                 // Ledger-wise grouped list
                 string query = @"
 SELECT 
-    l.Ledger_id,
-    l.Ledger_no,
-    l.Ledger_name_EN,
- td.CrDr_id,
+    ISNULL(l.Ledger_id, 0) AS Ledger_id,
+    ISNULL(l.Ledger_no, 0) AS Ledger_no,
+    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+    td.CrDr_id,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-INNER JOIN LEDGER l ON td.L_id = l.Ledger_id
+LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id    -- LEFT JOIN
 WHERE t.Status = 1
 AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name_EN, td.CrDr_id ORDER BY l.Ledger_no";
+                query += " GROUP BY \r\n    ISNULL(l.Ledger_id, 0), \r\n   ISNULL(l.Ledger_no, 0), \r\n    ISNULL(l.Ledger_name_EN, 'Sale'), \r\n    td.CrDr_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -59,8 +59,7 @@ SELECT
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate
-AND td.L_id != 0";
+AND CAST(t.Trans_date AS DATE) = @FromDate";  
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";
 
@@ -153,22 +152,22 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 // Ledger-wise grouped
                 string query = @"
 SELECT 
-    l.Ledger_id,
-    l.Ledger_no,
-    l.Ledger_name_EN,
- td.CrDr_id,
+    ISNULL(l.Ledger_id, 0) AS Ledger_id,
+    ISNULL(l.Ledger_no, 0) AS Ledger_no,
+    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+    td.CrDr_id,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-INNER JOIN LEDGER l ON td.L_id = l.Ledger_id
+LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id    -- LEFT JOIN
 WHERE t.Status = 1
 AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY l.Ledger_id, l.Ledger_no, l.Ledger_name_EN, td.CrDr_id ORDER BY l.Ledger_no";
+                query += " GROUP BY \r\n    ISNULL(l.Ledger_id, 0), \r\n    ISNULL(l.Ledger_no, 0), \r\n    ISNULL(l.Ledger_name_EN, 'Sale'), \r\n    td.CrDr_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -186,8 +185,7 @@ SELECT
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate
-AND td.L_id != 0";
+AND CAST(t.Trans_date AS DATE) = @FromDate";   
 
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";
@@ -281,9 +279,9 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 // All entries with Ledger info
                 string query = @"
 SELECT 
-    l.Ledger_id,
-    l.Ledger_no,
-    l.Ledger_name_EN,
+ISNULL(l.Ledger_id, 0) AS Ledger_id,
+ISNULL(l.Ledger_no, 0) AS Ledger_no,
+ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
     t.Trans_id,
     t.Trans_date,
     t.Trans_no,
@@ -300,7 +298,7 @@ SELECT
     CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END AS DR_Amount
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-INNER JOIN LEDGER l ON td.L_id = l.Ledger_id
+LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
 LEFT JOIN CUSTOMER c ON td.Cust_id = c.Cust_id
 LEFT JOIN TRANS_TYPE vt ON t.Trans_type_id = vt.Type_id
 WHERE t.Status = 1
@@ -327,8 +325,7 @@ SELECT
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate
-AND td.L_id != 0";
+AND CAST(t.Trans_date AS DATE) = @FromDate";   
 
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";

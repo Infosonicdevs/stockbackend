@@ -391,24 +391,38 @@ AND CAST(Date AS DATE) = @Date";
             {
                 db.Connect();
                 var result = db.GetTable(@"
-SELECT TOP 1 CAST(Date AS DATE) AS Login_date 
-FROM TEMP_TBL 
-WHERE Status = 1
-ORDER BY Date DESC");
+            SELECT TOP 1 CAST(Date AS DATE) AS Login_date 
+            FROM TEMP_TBL 
+            WHERE Status = 1
+            ORDER BY Date DESC");
                 db.Disconnect();
+
                 if (result.Rows.Count > 0)
                 {
-                    return Request.CreateResponse(HttpStatusCode.OK, new { success = true, data = result });
+                    // DateTime directly format 
+                    DateTime loginDate = Convert.ToDateTime(result.Rows[0]["Login_date"]);
+                    string formattedDate = loginDate.ToString("yyyy-MM-dd"); 
+
+                    return Request.CreateResponse(HttpStatusCode.OK, new
+                    {
+                        success = true,
+                        data = formattedDate
+                    });
                 }
                 else
                 {
-                    return Request.CreateResponse(HttpStatusCode.NotFound, new { success = false, message = "System Date Selected By Admin Not Found", data = new DataTable() });
+                    return Request.CreateResponse(HttpStatusCode.NotFound, new
+                    {
+                        success = false,
+                        message = "System Date Selected By Admin Not Found"
+                    });
                 }
             }
             catch (Exception ex)
             {
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, new { success = false, message = ex.Message });
+                return Request.CreateResponse(HttpStatusCode.InternalServerError,
+                    new { success = false, message = ex.Message });
             }
         }
 
@@ -540,7 +554,7 @@ ORDER BY Date DESC");
                     return Request.CreateResponse(HttpStatusCode.OK, "Record deleted");
                 }
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User!");
+                return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid User!"); 
             }
             catch (Exception ex)
             {
