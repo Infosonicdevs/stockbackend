@@ -177,6 +177,7 @@
     <Compile Include="Controllers\Ledger_reportController.cs" />
     <Compile Include="Controllers\OutletController.cs" />
     <Compile Include="Controllers\PrifixController.cs" />
+    <Compile Include="Controllers\Profit_LossController.cs" />
     <Compile Include="Controllers\PurchaseTransactionController.cs" />
     <Compile Include="Controllers\Purchase_RegisterController.cs" />
     <Compile Include="Controllers\Purchase_ReturnController.cs" />
@@ -202,6 +203,7 @@
     <Compile Include="Controllers\VendorInfoController.cs" />
     <Compile Include="Controllers\Vendor_ReportController.cs" />
     <Compile Include="Controllers\VoucherController.cs" />
+    <Compile Include="Controllers\VyapariPatrak_ReportController.cs" />
     <Compile Include="Controllers\YearController.cs" />
     <Compile Include="dbClass.cs" />
     <Compile Include="Global.asax.cs">

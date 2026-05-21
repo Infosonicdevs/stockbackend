@@ -29,12 +29,21 @@ SELECT
     ISNULL(l.Ledger_id, 0) AS Ledger_id,
     ISNULL(l.Ledger_no, 0) AS Ledger_no,
     ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+
+    MAX(
+        CASE 
+            WHEN td.CashTrans = 'C' THEN 'Cash'
+            WHEN td.CashTrans = 'T' THEN 'Transfer'
+            ELSE 'Unknown'
+        END
+    ) AS Trans_Type,
+
     td.CrDr_id,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id    -- LEFT JOIN
+LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
 WHERE t.Status = 1
 AND CAST(t.Trans_date AS DATE) = @FromDate";
 
@@ -75,18 +84,21 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
                 // Opening
+                // Opening Balance - Day by Day cumulative
                 string openingQuery = @"
 SELECT 
+    CAST(t.Trans_date AS DATE) AS Trans_Day,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND td.CashTrans = 'C'
 AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
 
                 SqlCommand cmdOpen = new SqlCommand(openingQuery, db.cn);
                 cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -96,10 +108,14 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                decimal Opening_Balance = Math.Abs(
-                    Convert.ToDecimal(dtOpen.Rows[0]["CR"]) -
-                    Convert.ToDecimal(dtOpen.Rows[0]["DR"])
-                );
+                // Everyday |CR - DR| cumulative add
+                decimal Opening_Balance = 0;
+                foreach (DataRow r in dtOpen.Rows)
+                {
+                    decimal cr = Convert.ToDecimal(r["CR"]);
+                    decimal dr = Convert.ToDecimal(r["DR"]);
+                    Opening_Balance += Math.Abs(cr - dr);
+                }
 
                 decimal Closing_Balance = Opening_Balance + Math.Abs(Today_CR - Today_DR);
 
@@ -113,6 +129,7 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                         Ledger_id = row["Ledger_id"],
                         Ledger_no = row["Ledger_no"],
                         Ledger_name_EN = row["Ledger_name_EN"],
+                        Trans_Type = row["Trans_Type"],
                         CrDr_id = row["CrDr_id"],
                         CR_Amount = row["CR_Amount"],
                         DR_Amount = row["DR_Amount"]
@@ -202,18 +219,21 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
                 // Opening
+                // Opening Balance - Day by Day cumulative
                 string openingQuery = @"
 SELECT 
+    CAST(t.Trans_date AS DATE) AS Trans_Day,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND td.CashTrans = 'C'
 AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
 
                 SqlCommand cmdOpen = new SqlCommand(openingQuery, db.cn);
                 cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -223,10 +243,14 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                decimal Opening_Balance = Math.Abs(
-                    Convert.ToDecimal(dtOpen.Rows[0]["CR"]) -
-                    Convert.ToDecimal(dtOpen.Rows[0]["DR"])
-                );
+                // Everyday |CR - DR| cumulative add
+                decimal Opening_Balance = 0;
+                foreach (DataRow r in dtOpen.Rows)
+                {
+                    decimal cr = Convert.ToDecimal(r["CR"]);
+                    decimal dr = Convert.ToDecimal(r["DR"]);
+                    Opening_Balance += Math.Abs(cr - dr);
+                }
 
                 decimal Closing_Balance = Opening_Balance + Math.Abs(Today_CR - Today_DR);
 
@@ -341,19 +365,21 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
-                // Opening
+                // Opening Balance - Day by Day cumulative
                 string openingQuery = @"
 SELECT 
+    CAST(t.Trans_date AS DATE) AS Trans_Day,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
     ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
 FROM TRANS t
 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
 WHERE t.Status = 1
-AND td.CashTrans = 'C'
 AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
 
                 SqlCommand cmdOpen = new SqlCommand(openingQuery, db.cn);
                 cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -363,10 +389,14 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                decimal Opening_Balance = Math.Abs(
-                    Convert.ToDecimal(dtOpen.Rows[0]["CR"]) -
-                    Convert.ToDecimal(dtOpen.Rows[0]["DR"])
-                );
+                // Everyday |CR - DR| cumulative add
+                decimal Opening_Balance = 0;
+                foreach (DataRow r in dtOpen.Rows)
+                {
+                    decimal cr = Convert.ToDecimal(r["CR"]);
+                    decimal dr = Convert.ToDecimal(r["DR"]);
+                    Opening_Balance += Math.Abs(cr - dr);
+                }
 
                 decimal Closing_Balance = Opening_Balance + Math.Abs(Today_CR - Today_DR);
 

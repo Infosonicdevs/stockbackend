@@ -269,7 +269,7 @@ namespace Stock_Backend.Controllers
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
-        }
+        } 
 
         [HttpPut]
         [Route("api/SaleTransaction")]

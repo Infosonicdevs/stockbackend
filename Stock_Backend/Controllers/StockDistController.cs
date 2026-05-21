@@ -206,36 +206,18 @@ namespace Stock_Backend.Controllers
             try
             {
                 db.Connect();
+
                 string query = @"
-WITH LatestRate AS (
-    SELECT 
-        Stock_id,
-        MRP,
-        Discount,
-        ROW_NUMBER() OVER (
-            PARTITION BY Stock_id 
-            ORDER BY Change_date DESC   
-        ) AS rn
-    FROM STOCK_RATE
-)
-SELECT 
-    sd.Outlet_id,
-    sd.Batch_no,
-    CAST(sd.Date AS DATE) AS Date,
-    SUM(sd.Quantity) AS Total_Quantity,
-    SUM(sd.Amount) AS Total_Amount,
-    ISNULL(MAX(lr.MRP), 0) AS MRP,
-    ISNULL(MAX(lr.Discount), 0) AS Discount
-FROM STOCK_DISTRIBUTION sd
-LEFT JOIN LatestRate lr 
-    ON sd.Stock_id = lr.Stock_id 
-    AND lr.rn = 1
-GROUP BY 
-    sd.Outlet_id,
-    sd.Batch_no,
-    CAST(sd.Date AS DATE)
-ORDER BY sd.Batch_no DESC";
-                var result = db.GetTable(query, new SqlParameter[] { new SqlParameter("@BatchNo", BatchNo) });
+        SELECT *
+        FROM VIEW_STOCK_DISTRIBUTION
+        WHERE Batch_no = @BatchNo
+        ORDER BY Date DESC";
+
+                var result = db.GetTable(query, new SqlParameter[]
+                {
+            new SqlParameter("@BatchNo", BatchNo)
+                });
+
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }

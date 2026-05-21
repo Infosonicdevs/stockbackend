@@ -62,6 +62,8 @@ ORDER BY Date, Outlet_name, Stock_name";
                         Outlet_id = g.Key.Outlet_id,
                         Outlet_name = g.Key.Outlet_name,
                         Outlet_code = g.Key.Outlet_code,
+                        Total_Quantity = g.Sum(s => Convert.ToDecimal(s["Quantity"])),  
+                        Total_Amount = g.Sum(s => Convert.ToDecimal(s["Amount"])),
 
                         Stocks = g.Select(s => new
                         {

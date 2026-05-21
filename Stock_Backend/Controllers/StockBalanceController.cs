@@ -14,6 +14,7 @@ namespace Stock_Backend.Controllers
         DbClass db = new DbClass();
 
         #region StockBalance
+        [HttpGet]
         [Route("api/StockBalance")]
         public HttpResponseMessage GetStockBalance(int? Outlet_id = null)
         {
@@ -34,8 +35,9 @@ namespace Stock_Backend.Controllers
             }
         }
 
-        [Route("api/StockBalance")]
-        public HttpResponseMessage GetStockBalance(int Bal_id)
+        [HttpGet]
+        [Route("api/StockBalance/{Bal_id}")]
+        public HttpResponseMessage GetStockBalanceById(int Bal_id)
         {
             try
             {

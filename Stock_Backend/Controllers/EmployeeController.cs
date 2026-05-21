@@ -115,7 +115,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Outlet_id", Employee.Outlet_id);
                         cmd.Parameters.AddWithValue("@DOB", Employee.DOB);
                         cmd.Parameters.AddWithValue("@Mobile_no", Employee.Mobile_no);
-                        cmd.Parameters.AddWithValue("@Emp_name", Employee.Emp_name);
+                        //cmd.Parameters.AddWithValue("@Emp_name", Employee.Emp_name);
                         cmd.Parameters.AddWithValue("@Cust_id", Employee.Cust_id);
                         cmd.Parameters.AddWithValue("@txt", 2);
 
@@ -176,7 +176,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Outlet_id", Employee.Outlet_id);
                         cmd.Parameters.AddWithValue("@DOB", Employee.DOB);
                         cmd.Parameters.AddWithValue("@Mobile_no", Employee.Mobile_no);
-                        cmd.Parameters.AddWithValue("@Emp_name", Employee.Emp_name);
+                        //cmd.Parameters.AddWithValue("@Emp_name", Employee.Emp_name);
                         cmd.Parameters.AddWithValue("@Cust_id", Employee.Cust_id);
                         cmd.Parameters.AddWithValue("@txt", 1);
                         cmd.ExecuteNonQuery();
