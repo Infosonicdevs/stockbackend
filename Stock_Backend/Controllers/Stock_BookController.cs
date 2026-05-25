@@ -116,7 +116,7 @@ AND s.Status = 1";
                     Total_Sale_Amt += Convert.ToDecimal(row["Amount"]);
                 }
 
-                decimal Closing_Amt = Math.Abs( Opening_Amt + Total_Sale_Amt - Total_Purchase_Amt);
+                decimal Closing_Amt =  Opening_Amt +Math.Abs( Total_Sale_Amt - Total_Purchase_Amt);
 
                 db.Disconnect();
 

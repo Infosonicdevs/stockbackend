@@ -124,6 +124,7 @@ ORDER BY lg.Seqno";
                         Group_id = g.Key.GroupId,
                         Group_name = g.Key.GroupName,
                         SubGroups = g.Select(x => new {
+
                             Sub_group_id = x["Ledger_id"],
                             Sub_group_name = x["Ledger_name"],
                             Prev_Amt = Math.Abs(Convert.ToDecimal(x["Prev_Amt"])),

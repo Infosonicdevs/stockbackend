@@ -33,8 +33,6 @@ namespace Stock_Backend.Controllers
         }
 
 
-
-
         [Route("api/Purchasereturn")]
         [HttpPost]
         public HttpResponseMessage PostPurchaseReturn([FromBody] PurchaseReturnModel request)
