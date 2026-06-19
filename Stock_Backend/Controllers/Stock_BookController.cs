@@ -5,7 +5,6 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Web.Http;
 
 namespace Stock_Backend.Controllers
@@ -16,45 +15,81 @@ namespace Stock_Backend.Controllers
 
         [Route("api/stockbook")]
         [HttpGet]
-        public HttpResponseMessage GetStockBook(int Stock_id, DateTime FromDate, DateTime ToDate, int? Outlet_id = null)
+        public HttpResponseMessage GetStockBook(int Stock_id, DateTime FromDate, DateTime ToDate, int? Outlet_id = null, int? Counter_id = null)
         {
             try
             {
                 db.Connect();
 
-                // OPENING STOCK
+                // OPENING STOCK - StockBalance + Purchase - Sale (FromDate )
                 string openingQuery = @"
-SELECT 
-    ISNULL((SELECT SUM(pd.Total) FROM PURCHASE_DETAILS pd 
-             INNER JOIN PURCHASE p ON p.Invoice_id = pd.Invoice_id
-             WHERE pd.Stock_id = @Stock_id 
-             AND CAST(p.Invoice_date AS DATE) < @FromDate), 0)
-    -
-    ISNULL((SELECT SUM(sd.Amount) FROM SALE_DETAILS sd 
-             INNER JOIN SALE s ON s.Sale_id = sd.Sale_Rtn_id
-             WHERE sd.Stock_id = @Stock_id 
-             AND CAST(s.Sale_date AS DATE) < @FromDate
-             AND s.Status = 1), 0)
-    AS Opening_Amt";
+                SELECT 
+                    ISNULL((SELECT SUM(sb.Amount) FROM STOCK_BALANCE sb
+                             WHERE sb.Stock_id = @Stock_id), 0)
+                    +
+                    ISNULL((SELECT SUM(pd.Total) FROM PURCHASE_DETAILS pd 
+                             INNER JOIN PURCHASE p ON p.Invoice_id = pd.Invoice_id
+                             WHERE pd.Stock_id = @Stock_id 
+                             AND CAST(p.Invoice_date AS DATE) < @FromDate), 0)
+                    -
+                    ISNULL((SELECT SUM(sd.Amount) FROM SALE_DETAILS sd 
+                             INNER JOIN SALE s ON s.Sale_id = sd.Sale_Rtn_id
+                             WHERE sd.Stock_id = @Stock_id 
+                             AND CAST(s.Sale_date AS DATE) < @FromDate
+                             AND s.Status = 1";
+
+                if (Counter_id != null)
+                    openingQuery += " AND s.Counter_id = @Counter_id";
+
+                openingQuery += @"), 0)
+                    AS Opening_Amt,
+
+                    ISNULL((SELECT SUM(sb.Quantity) FROM STOCK_BALANCE sb
+                             WHERE sb.Stock_id = @Stock_id), 0)
+                    +
+                    ISNULL((SELECT SUM(pd.Quantity) FROM PURCHASE_DETAILS pd 
+                             INNER JOIN PURCHASE p ON p.Invoice_id = pd.Invoice_id
+                             WHERE pd.Stock_id = @Stock_id 
+                             AND CAST(p.Invoice_date AS DATE) < @FromDate), 0)
+                    -
+                    ISNULL((SELECT SUM(sd.Quantity) FROM SALE_DETAILS sd 
+                             INNER JOIN SALE s ON s.Sale_id = sd.Sale_Rtn_id
+                             WHERE sd.Stock_id = @Stock_id 
+                             AND CAST(s.Sale_date AS DATE) < @FromDate
+                             AND s.Status = 1";
+
+                if (Counter_id != null)
+                    openingQuery += " AND s.Counter_id = @Counter_id";
+
+                openingQuery += @"), 0)
+                    AS Opening_Qty";
 
                 SqlCommand cmd1 = new SqlCommand(openingQuery, db.cn);
                 cmd1.Parameters.AddWithValue("@Stock_id", Stock_id);
                 cmd1.Parameters.AddWithValue("@FromDate", FromDate.Date);
-                decimal Opening_Amt = Math.Abs(Convert.ToDecimal(cmd1.ExecuteScalar()));
+                if (Counter_id != null)
+                    cmd1.Parameters.AddWithValue("@Counter_id", Counter_id);
 
-                // PURCHASE LIST
+                SqlDataAdapter daOpen = new SqlDataAdapter(cmd1);
+                DataTable dtOpen = new DataTable();
+                daOpen.Fill(dtOpen);
+
+                decimal Opening_Amt = dtOpen.Rows.Count > 0 ? Convert.ToDecimal(dtOpen.Rows[0]["Opening_Amt"]) : 0;
+                decimal Opening_Qty = dtOpen.Rows.Count > 0 ? Convert.ToDecimal(dtOpen.Rows[0]["Opening_Qty"]) : 0;
+
+                // PURCHASE LIST (Counter filter lागत नाही - purchase counter var hot nahi)
                 string purchaseQuery = @"
-SELECT 
-    p.Invoice_id,
-    p.Invoice_date AS Trans_date,
-    'Purchase' AS Type,
-    pd.Quantity,
-    pd.Price AS Rate,
-    pd.Total AS Amount
-FROM PURCHASE p
-INNER JOIN PURCHASE_DETAILS pd ON p.Invoice_id = pd.Invoice_id
-WHERE pd.Stock_id = @Stock_id
-AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
+                SELECT 
+                    p.Invoice_id,
+                    p.Invoice_date AS Trans_date,
+                    'Purchase' AS Type,
+                    pd.Quantity,
+                    pd.Price AS Rate,
+                    pd.Total AS Amount
+                FROM PURCHASE p
+                INNER JOIN PURCHASE_DETAILS pd ON p.Invoice_id = pd.Invoice_id
+                WHERE pd.Stock_id = @Stock_id
+                AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
 
                 if (Outlet_id != null)
                     purchaseQuery += " AND p.Outlet_id = @Outlet_id";
@@ -71,23 +106,26 @@ AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
                 DataTable dtPurchase = new DataTable();
                 new SqlDataAdapter(cmd2).Fill(dtPurchase);
 
-                // SALE LIST
+                // SALE LIST - counter wise filter
                 string saleQuery = @"
-SELECT 
-    s.Sale_id,
-    s.Sale_date AS Trans_date,
-    'Sale' AS Type,
-    sd.Quantity,
-    sd.Rate,
-    sd.Amount
-FROM SALE s
-INNER JOIN SALE_DETAILS sd ON s.Sale_id = sd.Sale_Rtn_id
-WHERE sd.Stock_id = @Stock_id
-AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
-AND s.Status = 1";
+                SELECT 
+                    s.Sale_id,
+                    s.Sale_date AS Trans_date,
+                    'Sale' AS Type,
+                    sd.Quantity,
+                    sd.Rate,
+                    sd.Amount
+                FROM SALE s
+                INNER JOIN SALE_DETAILS sd ON s.Sale_id = sd.Sale_Rtn_id
+                WHERE sd.Stock_id = @Stock_id
+                AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
+                AND s.Status = 1";
 
                 if (Outlet_id != null)
                     saleQuery += " AND s.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    saleQuery += " AND s.Counter_id = @Counter_id";
 
                 saleQuery += " ORDER BY s.Sale_date";
 
@@ -97,6 +135,8 @@ AND s.Status = 1";
                 cmd3.Parameters.AddWithValue("@ToDate", ToDate.Date);
                 if (Outlet_id != null)
                     cmd3.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd3.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dtSale = new DataTable();
                 new SqlDataAdapter(cmd3).Fill(dtSale);
@@ -116,7 +156,9 @@ AND s.Status = 1";
                     Total_Sale_Amt += Convert.ToDecimal(row["Amount"]);
                 }
 
-                decimal Closing_Amt =  Opening_Amt +Math.Abs( Total_Sale_Amt - Total_Purchase_Amt);
+                // CLOSING
+                decimal Closing_Amt = Opening_Amt + Total_Purchase_Amt - Total_Sale_Amt;
+                decimal Closing_Qty = Opening_Qty + Total_Purchase_Qty - Total_Sale_Qty;
 
                 db.Disconnect();
 
@@ -125,6 +167,7 @@ AND s.Status = 1";
                     Stock_id = Stock_id,
                     FromDate = FromDate.Date,
                     ToDate = ToDate.Date,
+                    Opening_Qty = Opening_Qty,
                     Opening_Amt = Opening_Amt,
                     Purchase = dtPurchase,
                     Sale = dtSale,
@@ -134,7 +177,8 @@ AND s.Status = 1";
                         Total_Purchase_Amt = Total_Purchase_Amt,
                         Total_Sale_Qty = Total_Sale_Qty,
                         Total_Sale_Amt = Total_Sale_Amt,
-                        Closing_Amt = Closing_Amt 
+                        Closing_Qty = Closing_Qty,
+                        Closing_Amt = Closing_Amt
                     }
                 };
 

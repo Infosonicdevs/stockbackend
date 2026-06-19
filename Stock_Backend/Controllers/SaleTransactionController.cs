@@ -14,6 +14,78 @@ namespace Stock_Backend.Controllers
     {
         DbClass db = new DbClass();
 
+        [HttpGet]
+        [Route("api/SaleTransaction/StockAvailable")]
+        public HttpResponseMessage GetStockAvailable(int Stock_id, int? Outlet_id = null)
+        {
+            try
+            {
+                db.Connect();
+
+                string query = @"
+        SELECT 
+            -- STOCK BALANCE
+            ISNULL((SELECT SUM(sb.Quantity) FROM STOCK_BALANCE sb
+                     WHERE sb.Stock_id = @Stock_id
+                     AND (@Outlet_id IS NULL OR sb.Outlet_id = @Outlet_id)), 0)
+            +
+            -- GS_INWARD (Purchase  stock)
+            ISNULL((SELECT SUM(gs.Quantity) FROM GS_INWARD gs
+                     WHERE gs.Stock_id = @Stock_id), 0)
+            +
+            -- DISTRIBUTION (Distribute  stock)
+            ISNULL((SELECT SUM(sd.Quantity) FROM stock_distribution sd
+                     WHERE sd.Stock_id = @Stock_id
+                     AND sd.Invert = 'N'
+                     AND (@Outlet_id IS NULL OR sd.Outlet_id = @Outlet_id)), 0)
+            AS Available_Qty,
+
+            -- STOCK BALANCE AMT
+            ISNULL((SELECT SUM(sb.Amount) FROM STOCK_BALANCE sb
+                     WHERE sb.Stock_id = @Stock_id
+                     AND (@Outlet_id IS NULL OR sb.Outlet_id = @Outlet_id)), 0)
+            +
+            -- GS_INWARD AMT
+            ISNULL((SELECT SUM(gs.Amount) FROM GS_INWARD gs
+                     WHERE gs.Stock_id = @Stock_id), 0)
+            +
+            -- DISTRIBUTION AMT
+            ISNULL((SELECT SUM(sd.Amount) FROM stock_distribution sd
+                     WHERE sd.Stock_id = @Stock_id
+                     AND sd.Invert = 'N'
+                     AND (@Outlet_id IS NULL OR sd.Outlet_id = @Outlet_id)), 0)
+            AS Available_Amt";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@Stock_id", Stock_id);
+                cmd.Parameters.AddWithValue("@Outlet_id", (object)Outlet_id ?? DBNull.Value);
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                decimal Available_Qty = dt.Rows.Count > 0 ? Convert.ToDecimal(dt.Rows[0]["Available_Qty"]) : 0;
+                decimal Available_Amt = dt.Rows.Count > 0 ? Convert.ToDecimal(dt.Rows[0]["Available_Amt"]) : 0;
+
+                db.Disconnect();
+
+                var result = new
+                {
+                    Stock_id = Stock_id,
+                    Outlet_id = Outlet_id,
+                    Available_Qty = Available_Qty,
+                    Available_Amt = Available_Amt
+                };
+
+                return Request.CreateResponse(HttpStatusCode.OK, result);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
         [Route("api/SaleTransaction")]
         public HttpResponseMessage GetSale()
         {
@@ -170,7 +242,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Receive_cash", request.Receive_cash);
                         cmd.Parameters.AddWithValue("@Return_cash", request.Return_cash);
                         cmd.Parameters.AddWithValue("@UPI_AMT", request.UPI_AMT);
-                        cmd.Parameters.AddWithValue("@Taxable_amt", request.Taxable_amt);
+                        cmd.Parameters.AddWithValue("@Taxable_amt", request.Receive_cash);
 
                         cmd.Parameters.AddWithValue("@CashTrans", request.CashTrans);
                         cmd.Parameters.AddWithValue("@Sale_CashTrans", request.Sale_CashTrans);
@@ -186,13 +258,35 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
+                        int ledger = 0;
+
+                        if (request.CashTrans == 'C')
+                        {
+                            SqlCommand cmdCash = new SqlCommand(
+                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='Cash submit'",
+                                db.cn,
+                                transaction);
+
+                            ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
+                        }
+                        else if (request.CashTrans == 'T')
+                        {
+                            SqlCommand cmdTransfer = new SqlCommand(
+                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
+                                db.cn,
+                                transaction);
+
+                            ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        }
+
+                        cmd.Parameters.AddWithValue("@Sale_L_id", ledger);
+                
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
 
                         cmd.Parameters.AddWithValue("@Roundoff_id", request.Roundoff_id);
-                        cmd.Parameters.AddWithValue("@Transfer_id", request.Transfer_id );
+                        cmd.Parameters.AddWithValue("@Transfer_id", 11);
                         cmd.Parameters.AddWithValue("@Cash_return_id_cr", request.Cash_return_id_cr);
                         cmd.Parameters.AddWithValue("@Cash_return_id_dr", request.Cash_return_id_dr);
 
@@ -337,7 +431,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Receive_cash", request.Receive_cash);
                         cmd.Parameters.AddWithValue("@Return_cash", request.Return_cash);
                         cmd.Parameters.AddWithValue("@UPI_AMT", request.UPI_AMT);
-                        cmd.Parameters.AddWithValue("@Taxable_amt", request.Taxable_amt);
+                        cmd.Parameters.AddWithValue("@Taxable_amt", request.Receive_cash);
 
                         cmd.Parameters.AddWithValue("@CashTrans", request.CashTrans);
                         cmd.Parameters.AddWithValue("@Sale_CashTrans", request.Sale_CashTrans);
@@ -355,13 +449,22 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                     cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
+                        int ledger = Sale_L_id;
+
+                        if (request.CashTrans == 'T')
+                        {
+                            SqlCommand cmdTransfer = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
+                                                     db.cn, transaction);
+
+                            ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        }
+                        cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
 
                         cmd.Parameters.AddWithValue("@Roundoff_id", request.Roundoff_id);
-                        cmd.Parameters.AddWithValue("@Transfer_id", request.Transfer_id);
+                        cmd.Parameters.AddWithValue("@Transfer_id", 11);
                         cmd.Parameters.AddWithValue("@Cash_return_id_cr", request.Cash_return_id_cr);
                         cmd.Parameters.AddWithValue("@Cash_return_id_dr", request.Cash_return_id_dr);
 
@@ -457,11 +560,11 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
-                if (!db.IsAdmin(request.User))
-                {
-                    db.Disconnect();
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Only admin can delete");
-                }
+                //if (!db.IsAdmin(request.User))
+                //{
+                //    db.Disconnect();
+                //    return Request.CreateResponse(HttpStatusCode.BadRequest, "Only admin can delete");
+                //}
 
                 if (request == null || request.Sale_id <= 0)
                 {

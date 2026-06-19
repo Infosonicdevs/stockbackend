@@ -15,7 +15,7 @@ namespace Stock_Backend.Controllers
         // API 1 - Main 
         [Route("api/sale/register")]
         [HttpGet]
-        public HttpResponseMessage GetSaleRegister(DateTime FromDate, DateTime ToDate)
+        public HttpResponseMessage GetSaleRegister(DateTime FromDate, DateTime ToDate, int? Outlet_id = null, int? Counter_id = null)
         {
             try
             {
@@ -33,13 +33,25 @@ SELECT
     ISNULL(SUM(s.Final_amt), 0) AS Bill_Amount
 FROM SALE s
 WHERE s.Status = 1
-AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
+AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
+
+                if (Outlet_id != null)
+                    query += " AND s.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    query += " AND s.Counter_id = @Counter_id";
+
+                query += @"
 GROUP BY CAST(s.Sale_date AS DATE)
 ORDER BY CAST(s.Sale_date AS DATE)";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 cmd.Parameters.AddWithValue("@ToDate", ToDate.Date);
+                if (Outlet_id != null)
+                    cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 System.Data.DataTable dt = new System.Data.DataTable();
                 new SqlDataAdapter(cmd).Fill(dt);
@@ -107,7 +119,7 @@ ORDER BY CAST(s.Sale_date AS DATE)";
         // API 2 - Outlet wise (outlet_id + counter_id)
         [Route("api/sale/register/outlet")]
         [HttpGet]
-        public HttpResponseMessage GetSaleRegisterByOutlet(DateTime FromDate, DateTime ToDate, int Outlet_id)
+        public HttpResponseMessage GetSaleRegisterByOutlet(DateTime FromDate, DateTime ToDate, int Outlet_id, int? Counter_id = null)
         {
             try
             {
@@ -127,7 +139,12 @@ SELECT
 FROM SALE s
 WHERE s.Status = 1
 AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
-AND s.Outlet_id = @Outlet_id
+AND s.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    query += " AND s.Counter_id = @Counter_id";
+
+                query += @"
 GROUP BY CAST(s.Sale_date AS DATE), s.Counter_id
 ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
 
@@ -135,6 +152,8 @@ ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 cmd.Parameters.AddWithValue("@ToDate", ToDate.Date);
                 cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 System.Data.DataTable dt = new System.Data.DataTable();
                 new SqlDataAdapter(cmd).Fill(dt);

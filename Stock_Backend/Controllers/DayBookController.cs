@@ -7,7 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
- 
+
 namespace Stock_Backend.Controllers
 {
     public class Day_BookController : ApiController
@@ -17,65 +17,112 @@ namespace Stock_Backend.Controllers
         // ================= MAIN =================
         [Route("api/Daybook/Main")]
         [HttpGet]
-        public HttpResponseMessage GetMainDaybook(DateTime FromDate, int? Outlet_id = null)
+        public HttpResponseMessage GetMainDaybook(DateTime FromDate, int? Outlet_id = null, int? Counter_id = null)
         {
             try
             {
                 db.Connect();
 
-                // Ledger-wise grouped list
                 string query = @"
-SELECT 
-    ISNULL(l.Ledger_id, 0) AS Ledger_id,
-    ISNULL(l.Ledger_no, 0) AS Ledger_no,
-    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+                SELECT 
+                    ISNULL(l.Ledger_id, 0) AS Ledger_id,
+                    ISNULL(l.Ledger_no, 0) AS Ledger_no,
+                    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
 
-    MAX(
-        CASE 
-            WHEN td.CashTrans = 'C' THEN 'Cash'
-            WHEN td.CashTrans = 'T' THEN 'Transfer'
-            ELSE 'Unknown'
-        END
-    ) AS Trans_Type,
+                    MAX(CASE 
+                        WHEN td.CashTrans = 'C' THEN 'Cash'
+                        WHEN td.CashTrans = 'T' THEN 'Transfer'
+                        ELSE 'Unknown'
+                    END) AS Trans_Type,
 
-    td.CrDr_id,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";
+                    td.CrDr_id,
+
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount,
+
+                    ISNULL(SUM(DISTINCT CASE WHEN t.Trans_type_id = 2 THEN s.Receive_cash END),0) AS Sale_Cash,
+                    ISNULL(SUM(DISTINCT CASE WHEN t.Trans_type_id = 2 THEN s.UPI_amt END),0) AS Sale_UPI,
+                    ISNULL(SUM(DISTINCT CASE WHEN t.Trans_type_id = 2 THEN s.Final_amt END),0) AS Sale_Final
+
+                FROM TRANS t
+                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
+                LEFT JOIN SALE s ON td.Master_id = s.Sale_id AND t.Trans_type_id = 2
+
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY \r\n    ISNULL(l.Ledger_id, 0), \r\n   ISNULL(l.Ledger_no, 0), \r\n    ISNULL(l.Ledger_name_EN, 'Sale'), \r\n    td.CrDr_id";
+                if (Counter_id != null)
+                    query += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
+
+                query += @"
+                        GROUP BY 
+                            ISNULL(l.Ledger_id,0), 
+                            ISNULL(l.Ledger_no,0), 
+                            ISNULL(l.Ledger_name_EN,'Sale'), 
+                            td.CrDr_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dt = new DataTable();
                 new SqlDataAdapter(cmd).Fill(dt);
 
-                // Summary
+                // SUMMARY
                 string sumQuery = @"
-SELECT 
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";  
+                            SELECT 
+                                ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
+                                ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
+                            FROM TRANS t
+                            INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                            WHERE t.Status = 1
+                            AND CAST(t.Trans_date AS DATE) = @FromDate";
+
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    sumQuery += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
 
                 SqlCommand cmd2 = new SqlCommand(sumQuery, db.cn);
                 cmd2.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmd2.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd2.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dt2 = new DataTable();
                 new SqlDataAdapter(cmd2).Fill(dt2);
@@ -83,20 +130,35 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
-                // Opening
-                // Opening Balance - Day by Day cumulative
+                // OPENING
                 string openingQuery = @"
-SELECT 
-    CAST(t.Trans_date AS DATE) AS Trans_Day,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) < @FromDate";
+                        SELECT 
+                            CAST(t.Trans_date AS DATE) AS Trans_Day,
+                            ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+                            ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+                        FROM TRANS t
+                        INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                        WHERE t.Status = 1
+                        AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    openingQuery += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
 
                 openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
 
@@ -104,11 +166,12 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmdOpen.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmdOpen.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                // Everyday |CR - DR| cumulative add
                 decimal Opening_Balance = 0;
                 foreach (DataRow r in dtOpen.Rows)
                 {
@@ -132,7 +195,10 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                         Trans_Type = row["Trans_Type"],
                         CrDr_id = row["CrDr_id"],
                         CR_Amount = row["CR_Amount"],
-                        DR_Amount = row["DR_Amount"]
+                        DR_Amount = row["DR_Amount"],
+                        Sale_Cash = row["Sale_Cash"],
+                        Sale_UPI = row["Sale_UPI"],
+                        Sale_Final = row["Sale_Final"]
                     });
                 }
 
@@ -156,7 +222,6 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
             }
         }
 
-
         // ================= GENERAL =================
         [Route("api/daybook/general")]
         [HttpGet]
@@ -166,25 +231,24 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
             {
                 db.Connect();
 
-                // Ledger-wise grouped
                 string query = @"
-SELECT 
-    ISNULL(l.Ledger_id, 0) AS Ledger_id,
-    ISNULL(l.Ledger_no, 0) AS Ledger_no,
-    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
-    td.CrDr_id,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id    -- LEFT JOIN
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";
+                SELECT 
+                    ISNULL(l.Ledger_id, 0) AS Ledger_id,
+                    ISNULL(l.Ledger_no, 0) AS Ledger_no,
+                    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+                    td.CrDr_id,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
+                FROM TRANS t
+                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
 
-                query += " GROUP BY \r\n    ISNULL(l.Ledger_id, 0), \r\n    ISNULL(l.Ledger_no, 0), \r\n    ISNULL(l.Ledger_name_EN, 'Sale'), \r\n    td.CrDr_id";
+                query += " GROUP BY ISNULL(l.Ledger_id,0), ISNULL(l.Ledger_no,0), ISNULL(l.Ledger_name_EN,'Sale'), td.CrDr_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -194,15 +258,14 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 DataTable dt = new DataTable();
                 new SqlDataAdapter(cmd).Fill(dt);
 
-                // Summary
                 string sumQuery = @"
-SELECT 
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";   
+                                        SELECT 
+                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
+                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
+                                        FROM TRANS t
+                                        INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                                        WHERE t.Status = 1
+                                        AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";
@@ -218,17 +281,15 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
-                // Opening
-                // Opening Balance - Day by Day cumulative
                 string openingQuery = @"
-SELECT 
-    CAST(t.Trans_date AS DATE) AS Trans_Day,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) < @FromDate";
+                    SELECT 
+                        CAST(t.Trans_date AS DATE) AS Trans_Day,
+                        ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+                        ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+                    FROM TRANS t
+                    INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                    WHERE t.Status = 1
+                    AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
@@ -243,7 +304,6 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                // Everyday |CR - DR| cumulative add
                 decimal Opening_Balance = 0;
                 foreach (DataRow r in dtOpen.Rows)
                 {
@@ -290,46 +350,64 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
             }
         }
 
-
         // ================= DETAILS =================
         [Route("api/daybook/details")]
         [HttpGet]
-        public HttpResponseMessage GetDetails(DateTime FromDate, int? Outlet_id = null)
+        public HttpResponseMessage GetDetails(DateTime FromDate, int? Outlet_id = null, int? Counter_id = null)
         {
             try
             {
                 db.Connect();
 
-                // All entries with Ledger info
                 string query = @"
-SELECT 
-ISNULL(l.Ledger_id, 0) AS Ledger_id,
-ISNULL(l.Ledger_no, 0) AS Ledger_no,
-ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
-    t.Trans_id,
-    t.Trans_date,
-    t.Trans_no,
-    vt.Type_name,
-    CASE 
-        WHEN td.CashTrans = 'C' THEN 'Cash'
-        WHEN td.CashTrans = 'T' THEN 'Transfer'
-    END AS Trans_Type,
-    td.Amount,
-    td.CrDr_id,
-    td.Narr,
-    ISNULL(c.First_name + ' ' + ISNULL(c.Middle_name,'') + ' ' + c.Last_name, '') AS Customer_name,
-    CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END AS CR_Amount,
-    CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END AS DR_Amount
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
-LEFT JOIN CUSTOMER c ON td.Cust_id = c.Cust_id
-LEFT JOIN TRANS_TYPE vt ON t.Trans_type_id = vt.Type_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";
+                    SELECT 
+                        ISNULL(l.Ledger_id, 0) AS Ledger_id,
+                        ISNULL(l.Ledger_no, 0) AS Ledger_no,
+                        ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+                        t.Trans_id,
+                        t.Trans_date,
+                        t.Trans_no,
+                        vt.Type_name,
+                        CASE 
+                            WHEN td.CashTrans = 'C' THEN 'Cash'
+                            WHEN td.CashTrans = 'T' THEN 'Transfer'
+                        END AS Trans_Type,
+                        td.Amount,
+                        td.CrDr_id,
+                        td.Narr,
+                        ISNULL(c.First_name + ' ' + ISNULL(c.Middle_name,'') + ' ' + c.Last_name, '') AS Customer_name,
+                        CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END AS CR_Amount,
+                        CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END AS DR_Amount,
+                        CASE WHEN t.Trans_type_id = 2 THEN ISNULL(s.Receive_cash, 0) ELSE 0 END AS Sale_Cash,
+                        CASE WHEN t.Trans_type_id = 2 THEN ISNULL(s.UPI_amt, 0) ELSE 0 END AS Sale_UPI,
+                        CASE WHEN t.Trans_type_id = 2 THEN ISNULL(s.Final_amt, 0) ELSE 0 END AS Sale_Final
+                    FROM TRANS t
+                    INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                    LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
+                    LEFT JOIN CUSTOMER c ON td.Cust_id = c.Cust_id
+                    LEFT JOIN TRANS_TYPE vt ON t.Trans_type_id = vt.Type_id
+                    LEFT JOIN SALE s ON td.Master_id = s.Sale_id AND t.Trans_type_id = 2
+                    WHERE t.Status = 1
+                    AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     query += " AND t.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    query += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
 
                 query += " ORDER BY l.Ledger_no, t.Trans_id";
 
@@ -337,27 +415,48 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dt = new DataTable();
                 new SqlDataAdapter(cmd).Fill(dt);
 
                 // Summary
                 string sumQuery = @"
-SELECT 
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) = @FromDate";   
+                SELECT 
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
+                FROM TRANS t
+                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                LEFT JOIN SALE s ON td.Master_id = s.Sale_id AND t.Trans_type_id = 2
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) = @FromDate";
 
                 if (Outlet_id != null)
                     sumQuery += " AND t.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    sumQuery += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
 
                 SqlCommand cmd2 = new SqlCommand(sumQuery, db.cn);
                 cmd2.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmd2.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmd2.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dt2 = new DataTable();
                 new SqlDataAdapter(cmd2).Fill(dt2);
@@ -365,19 +464,36 @@ AND CAST(t.Trans_date AS DATE) = @FromDate";
                 decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
                 decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
 
-                // Opening Balance - Day by Day cumulative
+                // Opening Balance
                 string openingQuery = @"
-SELECT 
-    CAST(t.Trans_date AS DATE) AS Trans_Day,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
-    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
-FROM TRANS t
-INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) < @FromDate";
+                SELECT 
+                    CAST(t.Trans_date AS DATE) AS Trans_Day,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+                FROM TRANS t
+                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                LEFT JOIN SALE s ON td.Master_id = s.Sale_id AND t.Trans_type_id = 2
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 if (Outlet_id != null)
                     openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                if (Counter_id != null)
+                    openingQuery += @" AND (
+                        t.Trans_id IN (
+                            SELECT t2.Trans_id FROM TRANS t2
+                            INNER JOIN TRANS_DETAILS td2 ON t2.Trans_id = td2.Trans_id
+                            INNER JOIN SALE s2 ON td2.Master_id = s2.Sale_id
+                            WHERE s2.Counter_id = @Counter_id
+                            AND t2.Trans_type_id = 2
+                        )
+                        OR
+                        t.Trans_id NOT IN (
+                            SELECT t3.Trans_id FROM TRANS t3
+                            WHERE t3.Trans_type_id = 2
+                        )
+                    )";
 
                 openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
 
@@ -385,11 +501,12 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                 cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
                 if (Outlet_id != null)
                     cmdOpen.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+                if (Counter_id != null)
+                    cmdOpen.Parameters.AddWithValue("@Counter_id", Counter_id);
 
                 DataTable dtOpen = new DataTable();
                 new SqlDataAdapter(cmdOpen).Fill(dtOpen);
 
-                // Everyday |CR - DR| cumulative add
                 decimal Opening_Balance = 0;
                 foreach (DataRow r in dtOpen.Rows)
                 {
@@ -402,7 +519,6 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
 
                 db.Disconnect();
 
-                //  Ledger-wise grouped
                 var grouped = new List<object>();
                 var ledgerGroups = dt.AsEnumerable()
                     .GroupBy(r => new {
@@ -428,7 +544,10 @@ AND CAST(t.Trans_date AS DATE) < @FromDate";
                             Narr = row["Narr"],
                             Customer_name = row["Customer_name"],
                             CR_Amount = row["CR_Amount"],
-                            DR_Amount = row["DR_Amount"]
+                            DR_Amount = row["DR_Amount"],
+                            Sale_Cash = row["Sale_Cash"],
+                            Sale_UPI = row["Sale_UPI"],
+                            Sale_Final = row["Sale_Final"]
                         });
                     }
 

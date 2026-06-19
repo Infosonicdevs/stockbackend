@@ -173,8 +173,8 @@ GROUP BY
                         Total_Credit = Total_Credit,
                         Total_Debit = Total_Debit,
                         Closing_Balance = Closing_Balance,
-                        Grand_Total_Credit = Grand_Total_Credit,  // Credit + Opening
-                        Grand_Total_Debit = Grand_Total_Debit    // Debit + Closing
+                        Grand_Total_Credit = Grand_Total_Credit,           // Credit + Opening
+                        Grand_Total_Debit = Grand_Total_Debit             // Debit + Closing
                     }
                 };
 

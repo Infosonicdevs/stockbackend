@@ -31,6 +31,24 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("api/GetSupplierDene")]
+        public IHttpActionResult GetSupplierDene()
+        {
+            db.Connect();
+
+            SqlCommand cmd = new SqlCommand(
+                "SELECT Ledger_id,Ledger_name FROM Ledger WHERE Ledger_name='Supplier Dene'",
+                db.cn);
+
+            SqlDataAdapter da = new SqlDataAdapter(cmd);
+            DataTable dt = new DataTable();
+            da.Fill(dt);
+
+            db.Disconnect();
+
+            return Ok(dt);
+        }
 
         [Route("api/PurchaseTransaction")]
         [HttpGet]
@@ -63,39 +81,6 @@ namespace Stock_Backend.Controllers
             }
         }
 
-        public List<BazaSetting> GetBazarSetting()
-        {
-            try
-            {
-                var result = db.GetTable("SELECT Purpose, L_id FROM Bazar_Settg");
-
-                decimal GetId(string purpose)
-                {
-                    var row = result.AsEnumerable().FirstOrDefault(r => r["Purpose"].ToString() == purpose);
-                    return row != null && row["L_id"] != DBNull.Value ? Convert.ToDecimal(row["L_id"]) : 0;
-                }
-
-                var list = new List<BazaSetting>();
-                list.Add(new BazaSetting
-                {
-                    Pur_id = GetId("Purchase account"),
-                    Round_Off_id = GetId("Round off account"),
-                    Hamali_id = GetId("Hamali account"),
-                    Commi_id = GetId("Commission account"),
-                    Transport_id = GetId("Transport rent account"),
-                    Ma_ses_id = GetId("Ma.Ses. charges"),
-                    Tcs_id = GetId("T.C.S. account"),
-                    Net_Disc_id = GetId("Net discount"),
-                    Transfer_id = GetId("Transfer account")
-                });
-
-                return list;
-            }
-            catch
-            {
-                return new List<BazaSetting>();
-            }
-        }
 
         [Route("api/PurchaseTransaction")]
         [HttpPost]
@@ -119,7 +104,41 @@ namespace Stock_Backend.Controllers
                     else
                     {
                         int Invoice_id = 0;
-                        List<BazaSetting> bazar_setting_id = GetBazarSetting();
+                        SqlCommand cmdPur = new SqlCommand(
+"SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
+                        int Pur_L_id = Convert.ToInt32(cmdPur.ExecuteScalar());
+
+                        SqlCommand cmdSupp = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Supplier Dene'", db.cn);
+                        int Supplier_Dene_id = Convert.ToInt32(cmdSupp.ExecuteScalar());
+
+                        SqlCommand cmdRound = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Round off account'", db.cn);
+                        int Round_Off_id = Convert.ToInt32(cmdRound.ExecuteScalar());
+
+                        SqlCommand cmdHamali = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Hamali account'", db.cn);
+                        int Hamali_id = Convert.ToInt32(cmdHamali.ExecuteScalar());
+
+                        SqlCommand cmdCommi = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Commission account'", db.cn);
+                        int Commi_id = Convert.ToInt32(cmdCommi.ExecuteScalar());
+
+                        SqlCommand cmdTransport = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transport rent account'", db.cn);
+                        int Transport_id = Convert.ToInt32(cmdTransport.ExecuteScalar());
+
+                        SqlCommand cmdMases = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Ma.Ses. charges'", db.cn);
+                        int Ma_ses_id = Convert.ToInt32(cmdMases.ExecuteScalar());
+
+                        SqlCommand cmdTcs = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='T.C.S. account'", db.cn);
+                        int Tcs_id = Convert.ToInt32(cmdTcs.ExecuteScalar());
+
+                        SqlCommand cmdNetDisc = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Net discount'", db.cn);
+                        int Net_Disc_id = Convert.ToInt32(cmdNetDisc.ExecuteScalar());
                         var gst_slab_result = db.GetTable("select top 1 * from VIEW_GST_SLAB order by Id desc");
                         var gst_slab_details_all = db.GetTable("select VIEW_GST_SLAB.CGST_per, VIEW_GST_SLAB.SGST_per, VIEW_GST_SLAB.IGST_per, VIEW_STOCK_DETAILS.Stock_id from VIEW_GST_SLAB left join VIEW_STOCK_DETAILS ON VIEW_GST_SLAB.Id = VIEW_STOCK_DETAILS.Slab_id");
 
@@ -127,7 +146,7 @@ namespace Stock_Backend.Controllers
                         {
                             try
                             {
-                                if (bazar_setting_id.Count > 0 && gst_slab_result.Rows.Count > 0)
+                               
                                 {
                                     SqlCommand cmd = new SqlCommand("Sp_Bazar_Purchase", db.cn, transaction);
 
@@ -137,24 +156,24 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Bill_date", request.Bill_date);
                                     cmd.Parameters.AddWithValue("@Vend_id", request.Vend_id);
                                     cmd.Parameters.AddWithValue("@Roundoff", request.RoundOFF);
-                                    cmd.Parameters.AddWithValue("@Roundoff_id", bazar_setting_id[0].Round_Off_id);
+                                    cmd.Parameters.AddWithValue("@Roundoff_id", Round_Off_id);
                                     cmd.Parameters.AddWithValue("@Final_amt", request.Final_amt);
                                     cmd.Parameters.AddWithValue("@Parvana_no", request.Parvana_no);
                                     cmd.Parameters.AddWithValue("@Truck_no", request.Truck_no);
                                     cmd.Parameters.AddWithValue("@Commi_amt", request.Commi_amt);
-                                    cmd.Parameters.AddWithValue("@Commi_id", bazar_setting_id[0].Commi_id);
+                                    cmd.Parameters.AddWithValue("@Commi_id", Commi_id);
                                     cmd.Parameters.AddWithValue("@Diff_amt", request.Diff_amt);
                                     cmd.Parameters.AddWithValue("@State_id", request.State_id);
                                     cmd.Parameters.AddWithValue("@Hamali", request.Hamali);
-                                    cmd.Parameters.AddWithValue("@Hamali_id", bazar_setting_id[0].Hamali_id);
+                                    cmd.Parameters.AddWithValue("@Hamali_id", Hamali_id);
                                     cmd.Parameters.AddWithValue("@Transport_amt", request.Transport_amt);
-                                    cmd.Parameters.AddWithValue("@Transport_id", bazar_setting_id[0].Transport_id);
+                                    cmd.Parameters.AddWithValue("@Transport_id", Transport_id);
                                     cmd.Parameters.AddWithValue("@Ma_ses_amt", request.Ma_ses_amt);
-                                    cmd.Parameters.AddWithValue("@Ma_ses_id", bazar_setting_id[0].Ma_ses_id);
+                                    cmd.Parameters.AddWithValue("@Ma_ses_id", Ma_ses_id);
                                     cmd.Parameters.AddWithValue("@Tcs_amt", request.TCS_amt);
-                                    cmd.Parameters.AddWithValue("@Tcs_id", bazar_setting_id[0].Tcs_id);
+                                    cmd.Parameters.AddWithValue("@Tcs_id", Tcs_id);
                                     cmd.Parameters.AddWithValue("@Credit_note", request.Credit_note);
-                                    cmd.Parameters.AddWithValue("@Credit_note_id", bazar_setting_id[0].Pur_id);
+                                    cmd.Parameters.AddWithValue("@Credit_note_id", Pur_L_id);
                                     cmd.Parameters.AddWithValue("@Pavati_no", request.Pavati_no);
                                     cmd.Parameters.AddWithValue("@invoice_no", request.Invoice_no);
                                     cmd.Parameters.AddWithValue("@net_disc", request.Net_disc);
@@ -167,7 +186,6 @@ namespace Stock_Backend.Controllers
 
                                     //Trans Details
                                     cmd.Parameters.AddWithValue("@CashTrans", request.CashTrans);
-                                    cmd.Parameters.AddWithValue("@Pur_L_id", bazar_setting_id[0].Pur_id);
                                     cmd.Parameters.AddWithValue("@Amount", request.Amount);
                                     cmd.Parameters.AddWithValue("@CGST_id", gst_slab_result.Rows[0]["CGST_l_id"]);
                                     cmd.Parameters.AddWithValue("@CGST_amt", request.CGST_amt);
@@ -182,10 +200,12 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Card_no", request.Card_no);
                                     cmd.Parameters.AddWithValue("@Invert", 'G');
                                     cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
-                                    cmd.Parameters.AddWithValue("@Net_dis_l_id", bazar_setting_id[0].Net_Disc_id);
+                                    cmd.Parameters.AddWithValue("@Net_dis_l_id",Net_Disc_id);
+                                    cmd.Parameters.AddWithValue("@Pur_L_id", Pur_L_id);
+
                                     if (request.CashTrans == 'T')
                                     {
-                                        cmd.Parameters.AddWithValue("@Transfer_id", bazar_setting_id[0].Transfer_id);
+                                        cmd.Parameters.AddWithValue("@Transfer_id", Supplier_Dene_id);
                                     }
                                     else
                                     {
@@ -287,7 +307,41 @@ namespace Stock_Backend.Controllers
                     else
                     {
                         int Invoice_id = 0;
-                        List<BazaSetting> bazar_setting_id = GetBazarSetting();
+                        SqlCommand cmdPur = new SqlCommand(
+"SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
+                        int Pur_L_id = Convert.ToInt32(cmdPur.ExecuteScalar());
+
+                        SqlCommand cmdSupp = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Supplier Dene'", db.cn);
+                        int Supplier_Dene_id = Convert.ToInt32(cmdSupp.ExecuteScalar());
+
+                        SqlCommand cmdRound = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Round off account'", db.cn);
+                        int Round_Off_id = Convert.ToInt32(cmdRound.ExecuteScalar());
+
+                        SqlCommand cmdHamali = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Hamali account'", db.cn);
+                        int Hamali_id = Convert.ToInt32(cmdHamali.ExecuteScalar());
+
+                        SqlCommand cmdCommi = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Commission account'", db.cn);
+                        int Commi_id = Convert.ToInt32(cmdCommi.ExecuteScalar());
+
+                        SqlCommand cmdTransport = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transport rent account'", db.cn);
+                        int Transport_id = Convert.ToInt32(cmdTransport.ExecuteScalar());
+
+                        SqlCommand cmdMases = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Ma.Ses. charges'", db.cn);
+                        int Ma_ses_id = Convert.ToInt32(cmdMases.ExecuteScalar());
+
+                        SqlCommand cmdTcs = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='T.C.S. account'", db.cn);
+                        int Tcs_id = Convert.ToInt32(cmdTcs.ExecuteScalar());
+
+                        SqlCommand cmdNetDisc = new SqlCommand(
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Net discount'", db.cn);
+                        int Net_Disc_id = Convert.ToInt32(cmdNetDisc.ExecuteScalar());
                         var gst_slab_result = db.GetTable("select top 1 * from VIEW_GST_SLAB order by Id desc");
                         var gst_slab_details_all = db.GetTable("select VIEW_GST_SLAB.CGST_per, VIEW_GST_SLAB.SGST_per, VIEW_GST_SLAB.IGST_per, VIEW_STOCK_DETAILS.Stock_id from VIEW_GST_SLAB left join VIEW_STOCK_DETAILS ON VIEW_GST_SLAB.Id = VIEW_STOCK_DETAILS.Slab_id");
 
@@ -295,7 +349,7 @@ namespace Stock_Backend.Controllers
                         {
                             try
                             {
-                                if (bazar_setting_id.Count > 0 && gst_slab_result.Rows.Count > 0)
+                               
                                 {
                                     SqlCommand cmd = new SqlCommand("Sp_Bazar_Purchase", db.cn, transaction);
 
@@ -306,24 +360,24 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Bill_date", request.Bill_date);
                                     cmd.Parameters.AddWithValue("@Vend_id", request.Vend_id);
                                     cmd.Parameters.AddWithValue("@Roundoff", request.RoundOFF);
-                                    cmd.Parameters.AddWithValue("@Roundoff_id", bazar_setting_id[0].Round_Off_id);
+                                    cmd.Parameters.AddWithValue("@Roundoff_id", Round_Off_id);
                                     cmd.Parameters.AddWithValue("@Final_amt", request.Final_amt);
                                     cmd.Parameters.AddWithValue("@Parvana_no", request.Parvana_no);
                                     cmd.Parameters.AddWithValue("@Truck_no", request.Truck_no);
                                     cmd.Parameters.AddWithValue("@Commi_amt", request.Commi_amt);
-                                    cmd.Parameters.AddWithValue("@Commi_id", bazar_setting_id[0].Commi_id);
+                                    cmd.Parameters.AddWithValue("@Commi_id", Commi_id);
                                     cmd.Parameters.AddWithValue("@Diff_amt", request.Diff_amt);
                                     cmd.Parameters.AddWithValue("@State_id", request.State_id);
                                     cmd.Parameters.AddWithValue("@Hamali", request.Hamali);
-                                    cmd.Parameters.AddWithValue("@Hamali_id", bazar_setting_id[0].Hamali_id);
+                                    cmd.Parameters.AddWithValue("@Hamali_id", Hamali_id);
                                     cmd.Parameters.AddWithValue("@Transport_amt", request.Transport_amt);
-                                    cmd.Parameters.AddWithValue("@Transport_id", bazar_setting_id[0].Transport_id);
+                                    cmd.Parameters.AddWithValue("@Transport_id", Transport_id);
                                     cmd.Parameters.AddWithValue("@Ma_ses_amt", request.Ma_ses_amt);
-                                    cmd.Parameters.AddWithValue("@Ma_ses_id", bazar_setting_id[0].Ma_ses_id);
+                                    cmd.Parameters.AddWithValue("@Ma_ses_id", Ma_ses_id);
                                     cmd.Parameters.AddWithValue("@Tcs_amt", request.TCS_amt);
-                                    cmd.Parameters.AddWithValue("@Tcs_id", bazar_setting_id[0].Tcs_id);
+                                    cmd.Parameters.AddWithValue("@Tcs_id", Tcs_id);
                                     cmd.Parameters.AddWithValue("@Credit_note", request.Credit_note);
-                                    cmd.Parameters.AddWithValue("@Credit_note_id", bazar_setting_id[0].Pur_id);
+                                    cmd.Parameters.AddWithValue("@Credit_note_id", Pur_L_id);
                                     cmd.Parameters.AddWithValue("@Pavati_no", request.Pavati_no);
                                     cmd.Parameters.AddWithValue("@invoice_no", request.Invoice_no);
                                     cmd.Parameters.AddWithValue("@net_disc", request.Net_disc);
@@ -339,7 +393,7 @@ namespace Stock_Backend.Controllers
 
                                     //Trans Details
                                     cmd.Parameters.AddWithValue("@CashTrans", request.CashTrans);
-                                    cmd.Parameters.AddWithValue("@Pur_L_id", bazar_setting_id[0].Pur_id);
+                                    cmd.Parameters.AddWithValue("@Pur_L_id", Pur_L_id);
                                     cmd.Parameters.AddWithValue("@Amount", request.Amount);
                                     cmd.Parameters.AddWithValue("@CGST_id", gst_slab_result.Rows[0]["CGST_l_id"]);
                                     cmd.Parameters.AddWithValue("@CGST_amt", request.CGST_amt);
@@ -354,12 +408,12 @@ namespace Stock_Backend.Controllers
                                     cmd.Parameters.AddWithValue("@Card_no", request.Card_no);
                                     cmd.Parameters.AddWithValue("@Invert", 'G');
                                     cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
-                                    cmd.Parameters.AddWithValue("@Net_dis_l_id", bazar_setting_id[0].Net_Disc_id);
+                                    cmd.Parameters.AddWithValue("@Net_dis_l_id",    Net_Disc_id);
                                     if (request.CashTrans == 'T')
                                     {
-                                        cmd.Parameters.AddWithValue("@Transfer_id", bazar_setting_id[0].Transfer_id);
+                                        cmd.Parameters.AddWithValue("@Transfer_id", Supplier_Dene_id);
                                     }
-                                    else if (request.CashTrans == 'C')
+                                    else
                                     {
                                         cmd.Parameters.AddWithValue("@Transfer_id", 0);
                                     }
