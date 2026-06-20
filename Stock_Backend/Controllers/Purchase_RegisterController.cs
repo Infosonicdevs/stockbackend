@@ -23,14 +23,15 @@ namespace Stock_Backend.Controllers
 
                 string query = @"
 SELECT 
+    p.Invoice_id,
     CAST(p.Invoice_date AS DATE) AS Invoice_Date,
-    COUNT(DISTINCT p.Invoice_id) AS Total_Pavati,
-    ISNULL(SUM(p.Final_amt) - SUM(pd_gst.Total_CGST) - SUM(pd_gst.Total_SGST) - SUM(pd_gst.Total_IGST) - SUM(p.Roundoff), 0) AS Sale_Amount,
-    ISNULL(SUM(pd_gst.Total_CGST), 0) AS Total_CGST,
-    ISNULL(SUM(pd_gst.Total_SGST), 0) AS Total_SGST,
-    ISNULL(SUM(pd_gst.Total_IGST), 0) AS Total_IGST,
-    ISNULL(SUM(p.Roundoff), 0) AS Total_Roundoff,
-    ISNULL(SUM(p.Final_amt), 0) AS Bill_Amount
+    p.Outlet_id,
+    ISNULL(p.Final_amt - pd_gst.Total_CGST - pd_gst.Total_SGST - pd_gst.Total_IGST - p.Roundoff, 0) AS Sale_Amount,
+    ISNULL(pd_gst.Total_CGST, 0) AS Total_CGST,
+    ISNULL(pd_gst.Total_SGST, 0) AS Total_SGST,
+    ISNULL(pd_gst.Total_IGST, 0) AS Total_IGST,
+    ISNULL(p.Roundoff, 0) AS Total_Roundoff,
+    ISNULL(p.Final_amt, 0) AS Bill_Amount
 FROM PURCHASE p
 INNER JOIN (
     SELECT 
@@ -47,8 +48,7 @@ AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
                     query += " AND p.Outlet_id = @Outlet_id";
 
                 query += @"
-GROUP BY CAST(p.Invoice_date AS DATE)
-ORDER BY CAST(p.Invoice_date AS DATE)";
+ORDER BY CAST(p.Invoice_date AS DATE), p.Invoice_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -66,7 +66,6 @@ ORDER BY CAST(p.Invoice_date AS DATE)";
 
                 foreach (System.Data.DataRow row in dt.Rows)
                 {
-                    int pavati = Convert.ToInt32(row["Total_Pavati"]);
                     decimal sale = Convert.ToDecimal(row["Sale_Amount"]);
                     decimal cgst = Convert.ToDecimal(row["Total_CGST"]);
                     decimal sgst = Convert.ToDecimal(row["Total_SGST"]);
@@ -74,7 +73,7 @@ ORDER BY CAST(p.Invoice_date AS DATE)";
                     decimal roundoff = Convert.ToDecimal(row["Total_Roundoff"]);
                     decimal bill = Convert.ToDecimal(row["Bill_Amount"]);
 
-                    grandPavati += pavati;
+                    grandPavati += 1;
                     grandSale += sale;
                     grandCGST += cgst;
                     grandSGST += sgst;
@@ -84,8 +83,9 @@ ORDER BY CAST(p.Invoice_date AS DATE)";
 
                     list.Add(new
                     {
+                        Invoice_id = row["Invoice_id"],
                         Invoice_Date = row["Invoice_Date"],
-                        Total_Pavati = pavati,
+                        Outlet_id = row["Outlet_id"],
                         Sale_Amount = sale,
                         Total_CGST = cgst,
                         Total_SGST = sgst,
@@ -103,6 +103,7 @@ ORDER BY CAST(p.Invoice_date AS DATE)";
                     Summary = new
                     {
                         Grand_Pavati = grandPavati,
+                        Grand_Sale = grandSale,
                         Grand_CGST = grandCGST,
                         Grand_SGST = grandSGST,
                         Grand_IGST = grandIGST,

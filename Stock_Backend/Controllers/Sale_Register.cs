@@ -12,7 +12,7 @@ namespace Stock_Backend.Controllers
     {
         DbClass db = new DbClass();
 
-        // API 1 - Main 
+       
         [Route("api/sale/register")]
         [HttpGet]
         public HttpResponseMessage GetSaleRegister(DateTime FromDate, DateTime ToDate, int? Outlet_id = null, int? Counter_id = null)
@@ -23,14 +23,16 @@ namespace Stock_Backend.Controllers
 
                 string query = @"
 SELECT 
+    s.Sale_id,
     CAST(s.Sale_date AS DATE) AS Sale_Date,
-    COUNT(DISTINCT s.Sale_id) AS Total_Pavati,
-    ISNULL(SUM(s.Final_amt) - SUM(s.Total_CGST) - SUM(s.Total_SGST) - SUM(s.Total_IGST) - SUM(s.Round_off), 0) AS Sale_Amount,
-    ISNULL(SUM(s.Total_CGST), 0) AS Total_CGST,
-    ISNULL(SUM(s.Total_SGST), 0) AS Total_SGST,
-    ISNULL(SUM(s.Total_IGST), 0) AS Total_IGST,
-    ISNULL(SUM(s.Round_off), 0) AS Total_Roundoff,
-    ISNULL(SUM(s.Final_amt), 0) AS Bill_Amount
+    s.Outlet_id,
+    s.Counter_id,
+    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
+    ISNULL(s.Total_CGST, 0) AS Total_CGST,
+    ISNULL(s.Total_SGST, 0) AS Total_SGST,
+    ISNULL(s.Total_IGST, 0) AS Total_IGST,
+    ISNULL(s.Round_off, 0) AS Total_Roundoff,
+    ISNULL(s.Final_amt, 0) AS Bill_Amount
 FROM SALE s
 WHERE s.Status = 1
 AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
@@ -42,8 +44,7 @@ AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
                     query += " AND s.Counter_id = @Counter_id";
 
                 query += @"
-GROUP BY CAST(s.Sale_date AS DATE)
-ORDER BY CAST(s.Sale_date AS DATE)";
+ORDER BY CAST(s.Sale_date AS DATE), s.Sale_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -63,7 +64,6 @@ ORDER BY CAST(s.Sale_date AS DATE)";
 
                 foreach (System.Data.DataRow row in dt.Rows)
                 {
-                    int pavati = Convert.ToInt32(row["Total_Pavati"]);
                     decimal sale = Convert.ToDecimal(row["Sale_Amount"]);
                     decimal cgst = Convert.ToDecimal(row["Total_CGST"]);
                     decimal sgst = Convert.ToDecimal(row["Total_SGST"]);
@@ -71,7 +71,7 @@ ORDER BY CAST(s.Sale_date AS DATE)";
                     decimal roundoff = Convert.ToDecimal(row["Total_Roundoff"]);
                     decimal bill = Convert.ToDecimal(row["Bill_Amount"]);
 
-                    grandPavati += pavati;
+                    grandPavati += 1;
                     grandSale += sale;
                     grandCGST += cgst;
                     grandSGST += sgst;
@@ -81,8 +81,10 @@ ORDER BY CAST(s.Sale_date AS DATE)";
 
                     list.Add(new
                     {
+                        Sale_id = row["Sale_id"],
                         Sale_Date = row["Sale_Date"],
-                        Total_Pavati = pavati,
+                        Outlet_id = row["Outlet_id"],
+                        Counter_id = row["Counter_id"],
                         Sale_Amount = sale,
                         Total_CGST = cgst,
                         Total_SGST = sgst,
@@ -116,7 +118,7 @@ ORDER BY CAST(s.Sale_date AS DATE)";
             }
         }
 
-        // API 2 - Outlet wise (outlet_id + counter_id)
+        // API 2 - 
         [Route("api/sale/register/outlet")]
         [HttpGet]
         public HttpResponseMessage GetSaleRegisterByOutlet(DateTime FromDate, DateTime ToDate, int Outlet_id, int? Counter_id = null)
@@ -127,15 +129,15 @@ ORDER BY CAST(s.Sale_date AS DATE)";
 
                 string query = @"
 SELECT 
+    s.Sale_id,
     CAST(s.Sale_date AS DATE) AS Sale_Date,
     s.Counter_id,
-    COUNT(DISTINCT s.Sale_id) AS Total_Pavati,
-    ISNULL(SUM(s.Final_amt) - SUM(s.Total_CGST) - SUM(s.Total_SGST) - SUM(s.Total_IGST) - SUM(s.Round_off), 0) AS Sale_Amount,
-    ISNULL(SUM(s.Total_CGST), 0) AS Total_CGST,
-    ISNULL(SUM(s.Total_SGST), 0) AS Total_SGST,
-    ISNULL(SUM(s.Total_IGST), 0) AS Total_IGST,
-    ISNULL(SUM(s.Round_off), 0) AS Total_Roundoff,
-    ISNULL(SUM(s.Final_amt), 0) AS Bill_Amount
+    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
+    ISNULL(s.Total_CGST, 0) AS Total_CGST,
+    ISNULL(s.Total_SGST, 0) AS Total_SGST,
+    ISNULL(s.Total_IGST, 0) AS Total_IGST,
+    ISNULL(s.Round_off, 0) AS Total_Roundoff,
+    ISNULL(s.Final_amt, 0) AS Bill_Amount
 FROM SALE s
 WHERE s.Status = 1
 AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
@@ -145,8 +147,7 @@ AND s.Outlet_id = @Outlet_id";
                     query += " AND s.Counter_id = @Counter_id";
 
                 query += @"
-GROUP BY CAST(s.Sale_date AS DATE), s.Counter_id
-ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
+ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id, s.Sale_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -165,7 +166,6 @@ ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
 
                 foreach (System.Data.DataRow row in dt.Rows)
                 {
-                    int pavati = Convert.ToInt32(row["Total_Pavati"]);
                     decimal sale = Convert.ToDecimal(row["Sale_Amount"]);
                     decimal cgst = Convert.ToDecimal(row["Total_CGST"]);
                     decimal sgst = Convert.ToDecimal(row["Total_SGST"]);
@@ -173,7 +173,7 @@ ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
                     decimal roundoff = Convert.ToDecimal(row["Total_Roundoff"]);
                     decimal bill = Convert.ToDecimal(row["Bill_Amount"]);
 
-                    grandPavati += pavati;
+                    grandPavati += 1;
                     grandSale += sale;
                     grandCGST += cgst;
                     grandSGST += sgst;
@@ -183,9 +183,9 @@ ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id";
 
                     list.Add(new
                     {
+                        Sale_id = row["Sale_id"],
                         Sale_Date = row["Sale_Date"],
                         Counter_id = row["Counter_id"],
-                        Total_Pavati = pavati,
                         Sale_Amount = sale,
                         Total_CGST = cgst,
                         Total_SGST = sgst,
