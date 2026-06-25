@@ -22,33 +22,33 @@ namespace Stock_Backend.Controllers
                 db.Connect();
 
                 string query = @"
-SELECT 
-    p.Invoice_id,
-    CAST(p.Invoice_date AS DATE) AS Invoice_Date,
-    p.Outlet_id,
-    ISNULL(p.Final_amt - pd_gst.Total_CGST - pd_gst.Total_SGST - pd_gst.Total_IGST - p.Roundoff, 0) AS Sale_Amount,
-    ISNULL(pd_gst.Total_CGST, 0) AS Total_CGST,
-    ISNULL(pd_gst.Total_SGST, 0) AS Total_SGST,
-    ISNULL(pd_gst.Total_IGST, 0) AS Total_IGST,
-    ISNULL(p.Roundoff, 0) AS Total_Roundoff,
-    ISNULL(p.Final_amt, 0) AS Bill_Amount
-FROM PURCHASE p
-INNER JOIN (
-    SELECT 
-        Invoice_id,
-        SUM(CGST_amt) AS Total_CGST,
-        SUM(SGST_amt) AS Total_SGST,
-        SUM(IGST_amt) AS Total_IGST
-    FROM PURCHASE_DETAILS
-    GROUP BY Invoice_id
-) pd_gst ON pd_gst.Invoice_id = p.Invoice_id
-WHERE p.Status = '1'
-AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
-                if (Outlet_id != null)
-                    query += " AND p.Outlet_id = @Outlet_id";
+                SELECT 
+                    p.Invoice_id,
+                    CAST(p.Invoice_date AS DATE) AS Invoice_Date,
+                    p.Outlet_id,
+                    ISNULL(p.Final_amt - pd_gst.Total_CGST - pd_gst.Total_SGST - pd_gst.Total_IGST - p.Roundoff, 0) AS Sale_Amount,
+                    ISNULL(pd_gst.Total_CGST, 0) AS Total_CGST,
+                    ISNULL(pd_gst.Total_SGST, 0) AS Total_SGST,
+                    ISNULL(pd_gst.Total_IGST, 0) AS Total_IGST,
+                    ISNULL(p.Roundoff, 0) AS Total_Roundoff,
+                    ISNULL(p.Final_amt, 0) AS Bill_Amount
+                FROM PURCHASE p
+                INNER JOIN (
+                    SELECT 
+                        Invoice_id,
+                        SUM(CGST_amt) AS Total_CGST,
+                        SUM(SGST_amt) AS Total_SGST,
+                        SUM(IGST_amt) AS Total_IGST
+                    FROM PURCHASE_DETAILS
+                    GROUP BY Invoice_id
+                ) pd_gst ON pd_gst.Invoice_id = p.Invoice_id
+                WHERE p.Status = '1'
+                AND CAST(p.Invoice_date AS DATE) BETWEEN @FromDate AND @ToDate";
+                                if (Outlet_id != null)
+                                    query += " AND p.Outlet_id = @Outlet_id";
 
-                query += @"
-ORDER BY CAST(p.Invoice_date AS DATE), p.Invoice_id";
+                                query += @"
+                ORDER BY CAST(p.Invoice_date AS DATE), p.Invoice_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -88,7 +88,7 @@ ORDER BY CAST(p.Invoice_date AS DATE), p.Invoice_id";
                         Outlet_id = row["Outlet_id"],
                         Sale_Amount = sale,
                         Total_CGST = cgst,
-                        Total_SGST = sgst,
+                        Total_SGST = sgst,        
                         Total_IGST = igst,
                         Total_Roundoff = roundoff,
                         Bill_Amount = bill

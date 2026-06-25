@@ -22,20 +22,20 @@ namespace Stock_Backend.Controllers
                 db.Connect();
 
                 string query = @"
-SELECT 
-    s.Sale_id,
-    CAST(s.Sale_date AS DATE) AS Sale_Date,
-    s.Outlet_id,
-    s.Counter_id,
-    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
-    ISNULL(s.Total_CGST, 0) AS Total_CGST,
-    ISNULL(s.Total_SGST, 0) AS Total_SGST,
-    ISNULL(s.Total_IGST, 0) AS Total_IGST,
-    ISNULL(s.Round_off, 0) AS Total_Roundoff,
-    ISNULL(s.Final_amt, 0) AS Bill_Amount
-FROM SALE s
-WHERE s.Status = 1
-AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
+                SELECT 
+                    s.Sale_id,
+                    CAST(s.Sale_date AS DATE) AS Sale_Date,
+                    s.Outlet_id,
+                    s.Counter_id,
+                    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
+                    ISNULL(s.Total_CGST, 0) AS Total_CGST,
+                    ISNULL(s.Total_SGST, 0) AS Total_SGST,
+                    ISNULL(s.Total_IGST, 0) AS Total_IGST,
+                    ISNULL(s.Round_off, 0) AS Total_Roundoff,
+                    ISNULL(s.Final_amt, 0) AS Bill_Amount
+                FROM SALE s
+                WHERE s.Status = 1
+                AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
 
                 if (Outlet_id != null)
                     query += " AND s.Outlet_id = @Outlet_id";
@@ -44,7 +44,7 @@ AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate";
                     query += " AND s.Counter_id = @Counter_id";
 
                 query += @"
-ORDER BY CAST(s.Sale_date AS DATE), s.Sale_id";
+              ORDER BY CAST(s.Sale_date AS DATE), s.Sale_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
@@ -128,26 +128,26 @@ ORDER BY CAST(s.Sale_date AS DATE), s.Sale_id";
                 db.Connect();
 
                 string query = @"
-SELECT 
-    s.Sale_id,
-    CAST(s.Sale_date AS DATE) AS Sale_Date,
-    s.Counter_id,
-    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
-    ISNULL(s.Total_CGST, 0) AS Total_CGST,
-    ISNULL(s.Total_SGST, 0) AS Total_SGST,
-    ISNULL(s.Total_IGST, 0) AS Total_IGST,
-    ISNULL(s.Round_off, 0) AS Total_Roundoff,
-    ISNULL(s.Final_amt, 0) AS Bill_Amount
-FROM SALE s
-WHERE s.Status = 1
-AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
-AND s.Outlet_id = @Outlet_id";
+                SELECT 
+                    s.Sale_id,
+                    CAST(s.Sale_date AS DATE) AS Sale_Date,
+                    s.Counter_id,
+                    ISNULL(s.Final_amt - s.Total_CGST - s.Total_SGST - s.Total_IGST - s.Round_off, 0) AS Sale_Amount,
+                    ISNULL(s.Total_CGST, 0) AS Total_CGST,
+                    ISNULL(s.Total_SGST, 0) AS Total_SGST,
+                    ISNULL(s.Total_IGST, 0) AS Total_IGST,
+                    ISNULL(s.Round_off, 0) AS Total_Roundoff,
+                    ISNULL(s.Final_amt, 0) AS Bill_Amount
+                FROM SALE s
+                WHERE s.Status = 1
+                AND CAST(s.Sale_date AS DATE) BETWEEN @FromDate AND @ToDate
+                AND s.Outlet_id = @Outlet_id";
 
                 if (Counter_id != null)
                     query += " AND s.Counter_id = @Counter_id";
 
                 query += @"
-ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id, s.Sale_id";
+                ORDER BY CAST(s.Sale_date AS DATE), s.Counter_id, s.Sale_id";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);

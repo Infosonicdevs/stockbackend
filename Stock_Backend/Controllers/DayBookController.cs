@@ -44,23 +44,9 @@ namespace Stock_Backend.Controllers
                     ISNULL(SUM(DISTINCT CASE WHEN t.Trans_type_id = 2 THEN s.UPI_amt END),0) AS UPI,
                     ISNULL(SUM(DISTINCT CASE WHEN t.Trans_type_id = 2 THEN s.Final_amt END),0) AS Sale_Final,
 
-                    ISNULL(SUM(
-    CASE
-        WHEN t.Trans_type_id = 1
-         AND td.CrDr_id = 2
-         AND td.CashTrans = 'C'
-        THEN td.Amount
-        ELSE 0
-    END),0) AS Cash,
+                    ISNULL(SUM( CASE WHEN t.Trans_type_id = 1 AND td.CrDr_id = 2 AND td.CashTrans = 'C' THEN td.Amount ELSE 0 END),0) AS Cash,
 
-ISNULL(SUM(
-    CASE
-        WHEN t.Trans_type_id = 1
-         AND td.CrDr_id = 2
-         AND td.CashTrans = 'T'
-        THEN td.Amount
-        ELSE 0
-    END),0) AS UPI
+                    ISNULL(SUM( CASE WHEN t.Trans_type_id = 1 AND td.CrDr_id = 2 AND td.CashTrans = 'T' THEN td.Amount ELSE 0 END),0) AS UPI
 
                 FROM TRANS t
                 INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
@@ -402,21 +388,9 @@ ISNULL(SUM(
                         CASE WHEN t.Trans_type_id = 2 THEN ISNULL(s.UPI_amt, 0) ELSE 0 END AS UPI,
                         CASE WHEN t.Trans_type_id = 2 THEN ISNULL(s.Final_amt, 0) ELSE 0 END AS Sale_Final,
                       
-                        CASE
-    WHEN t.Trans_type_id = 1
-     AND td.CrDr_id = 2
-     AND td.CashTrans = 'C'
-    THEN td.Amount
-    ELSE 0
-END AS Cash,
+                        CASE WHEN t.Trans_type_id = 1 AND td.CrDr_id = 2 AND td.CashTrans = 'C' THEN td.Amount ELSE 0 END AS Cash,
 
-CASE
-    WHEN t.Trans_type_id = 1
-     AND td.CrDr_id = 2
-     AND td.CashTrans = 'T'
-    THEN td.Amount
-    ELSE 0
-END AS UPI
+                        CASE WHEN t.Trans_type_id = 1 AND td.CrDr_id = 2 AND td.CashTrans = 'T' THEN td.Amount ELSE 0 END AS UPI
 
                     FROM TRANS t
                     INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id

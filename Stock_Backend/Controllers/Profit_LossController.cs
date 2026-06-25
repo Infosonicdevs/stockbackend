@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -23,30 +23,30 @@ namespace Stock_Backend.Controllers
                 string outletFilter = Outlet_id != null ? " AND t.Outlet_id = @Outlet_id" : "";
 
                 string query = @"
-SELECT 
-    lg.L_group_id,
-    lg.L_group_name,
-    l.Ledger_id,
-    l.Ledger_name,
+                SELECT 
+                    lg.L_group_id,
+                    lg.L_group_name,
+                    l.Ledger_id,
+                    l.Ledger_name,
 
-    SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END) AS CreditAmt,
-    SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END) AS DebitAmt
+                    SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END) AS CreditAmt,
+                    SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END) AS DebitAmt
 
-FROM LEDGER_GROUP lg
-INNER JOIN LEDGER l ON l.Ledger_group_id = lg.L_group_id
-LEFT JOIN TRANS_DETAILS td ON td.L_id = l.Ledger_id
-LEFT JOIN TRANS t ON t.Trans_id = td.Trans_id
+                FROM LEDGER_GROUP lg
+                INNER JOIN LEDGER l ON l.Ledger_group_id = lg.L_group_id
+                LEFT JOIN TRANS_DETAILS td ON td.L_id = l.Ledger_id
+                LEFT JOIN TRANS t ON t.Trans_id = td.Trans_id
 
-WHERE t.Status = 1
-AND CAST(t.Trans_date AS DATE) BETWEEN @FromDate AND @ToDate
-" + outletFilter + @"
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) BETWEEN @FromDate AND @ToDate
+                " + outletFilter + @"
 
-GROUP BY 
-    lg.L_group_id,
-    lg.L_group_name,
-    l.Ledger_id,
-    l.Ledger_name
-";
+                GROUP BY 
+                    lg.L_group_id,
+                    lg.L_group_name,
+                    l.Ledger_id,
+                    l.Ledger_name
+                ";
 
                 SqlCommand cmd = new SqlCommand(query, db.cn);
                 cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);

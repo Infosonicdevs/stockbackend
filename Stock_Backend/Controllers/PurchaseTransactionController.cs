@@ -105,7 +105,7 @@ namespace Stock_Backend.Controllers
                     {
                         int Invoice_id = 0;
                         SqlCommand cmdPur = new SqlCommand(
-"SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
                         int Pur_L_id = Convert.ToInt32(cmdPur.ExecuteScalar());
 
                         SqlCommand cmdSupp = new SqlCommand(
@@ -308,7 +308,7 @@ namespace Stock_Backend.Controllers
                     {
                         int Invoice_id = 0;
                         SqlCommand cmdPur = new SqlCommand(
-"SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
+                        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Purchase account'", db.cn);
                         int Pur_L_id = Convert.ToInt32(cmdPur.ExecuteScalar());
 
                         SqlCommand cmdSupp = new SqlCommand(
