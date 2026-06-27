@@ -236,7 +236,6 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
-
         [Route("api/DelStockDetail")]
         [HttpPost]
         public HttpResponseMessage DeleteStockDetail([FromBody] STOCK_DETAILS stock_details)
@@ -247,6 +246,27 @@ namespace Stock_Backend.Controllers
 
                 if (db.IsAdmin(stock_details.Modified_by))
                 {
+                    string checkQuery = @"
+            SELECT
+            (SELECT COUNT(*) FROM BAZAR_ENDING_BAL WHERE Stock_id = " + stock_details.Stock_id + @")  +
+            ( SELECT COUNT(*) FROM GS_INWARD WHERE Stock_id = " + stock_details.Stock_id + @" ) +
+            (SELECT COUNT(*) FROM PURCHASE_DETAILS WHERE Stock_id = " + stock_details.Stock_id + @") +
+            (SELECT COUNT(*) FROM SALE_DETAILS WHERE Stock_id = " + stock_details.Stock_id + @" ) +
+            ( SELECT COUNT(*) FROM STOCK_BALANCE WHERE Stock_id = " + stock_details.Stock_id + @" ) +
+            ( SELECT COUNT(*) FROM STOCK_DISTRIBUTION WHERE Stock_id = " + stock_details.Stock_id + @" ) +
+            ( SELECT COUNT(*) FROM Stock_loss WHERE Stock_id = " + stock_details.Stock_id + @" )";
+
+                    int count = Convert.ToInt32(db.ExecuteScalar(checkQuery));
+
+                    if (count > 0)
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(
+                            HttpStatusCode.BadRequest,
+                            "This stock is already used in transactions, so it cannot be deleted."
+                        );
+                    }
+
                     SqlCommand cmd = new SqlCommand("Sp_Stock_Details_dlt", db.cn);
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.AddWithValue("@Stock_id", stock_details.Stock_id);
@@ -255,6 +275,7 @@ namespace Stock_Backend.Controllers
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.OK, "Record Deleted");
                 }
+
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid user");
             }

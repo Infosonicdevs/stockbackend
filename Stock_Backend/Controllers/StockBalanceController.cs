@@ -62,8 +62,8 @@ namespace Stock_Backend.Controllers
 
                 if (db.IsValidUser(sTOCK_BALANCE.Created_By))
                 {
-                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_no = "
-        + sTOCK_BALANCE.Stock_no +
+                    if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = "
+        + sTOCK_BALANCE.Stock_id +
         " AND Outlet_id = " + sTOCK_BALANCE.Outlet_id))
                     {
                         db.Disconnect();
@@ -80,7 +80,7 @@ namespace Stock_Backend.Controllers
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
                         
-                        cmd.Parameters.AddWithValue("@Stock_no", sTOCK_BALANCE.Stock_no);
+                        cmd.Parameters.AddWithValue("@Stock_id", sTOCK_BALANCE.Stock_id);
                         cmd.Parameters.AddWithValue("@Quantity", sTOCK_BALANCE.Quantity);
                         cmd.Parameters.AddWithValue("@Amount", sTOCK_BALANCE.Amount);
                         cmd.Parameters.AddWithValue("@MRP", 0);
@@ -115,7 +115,7 @@ namespace Stock_Backend.Controllers
                 if (db.IsAdmin(sTOCK_BALANCE.Modified_By))
                 {
                     if (db.IsExists("Select * from STOCK_BALANCE where Stock_id = "
-     + sTOCK_BALANCE.Stock_no +
+     + sTOCK_BALANCE.Stock_id +
      " AND Outlet_id = " + sTOCK_BALANCE.Outlet_id +
      " AND Bal_id != " + sTOCK_BALANCE.Bal_id))
                     {
@@ -133,7 +133,7 @@ namespace Stock_Backend.Controllers
                         cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
                         cmd.Parameters.AddWithValue("@Bal_id", sTOCK_BALANCE.Bal_id);
-                        cmd.Parameters.AddWithValue("@Stock_id", sTOCK_BALANCE.Stock_no);
+                        cmd.Parameters.AddWithValue("@Stock_id", sTOCK_BALANCE.Stock_id     );
                         cmd.Parameters.AddWithValue("@Quantity", sTOCK_BALANCE.Quantity);
                         cmd.Parameters.AddWithValue("@Amount", sTOCK_BALANCE.Amount);
                         cmd.Parameters.AddWithValue("@MRP", 0);
