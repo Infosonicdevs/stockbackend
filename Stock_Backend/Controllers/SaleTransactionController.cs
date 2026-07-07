@@ -258,28 +258,29 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        int ledger = 0;
+                        //int ledger = 0;
 
-                        if (request.CashTrans == 'C')
-                        {
-                            SqlCommand cmdCash = new SqlCommand(
-                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='Cash submit'",
-                                db.cn,
-                                transaction);
+                        //if (request.CashTrans == 'C')
+                        //{
+                        //    SqlCommand cmdCash = new SqlCommand(
+                        //        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Cash submit'",
+                        //        db.cn,
+                        //        transaction);
 
-                            ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
-                        }
-                        else if (request.CashTrans == 'T')
-                        {
-                            SqlCommand cmdTransfer = new SqlCommand(
-                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
-                                db.cn,
-                                transaction);
+                        //    ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
+                        //}
+                        //else if (request.CashTrans == 'T')
+                        //{
+                        //    SqlCommand cmdTransfer = new SqlCommand(
+                        //        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
+                        //        db.cn,
+                        //        transaction);
 
-                            ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
-                        }
+                        //    ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        //}
 
-                        cmd.Parameters.AddWithValue("@Sale_L_id", ledger);
+                        //cmd.Parameters.AddWithValue("@Sale_L_id", ledger);
+                        cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                 
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
