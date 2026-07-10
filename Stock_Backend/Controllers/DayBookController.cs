@@ -14,6 +14,7 @@ namespace Stock_Backend.Controllers
     {
         DbClass db = new DbClass();
 
+        #region OLD_MAIN_DAYBOOK
         // ================= MAIN =================
         [Route("api/Daybook/Main")]
         [HttpGet]
@@ -196,13 +197,15 @@ namespace Stock_Backend.Controllers
                         Ledger_id = row["Ledger_id"],
                         Ledger_no = row["Ledger_no"],
                         Ledger_name_EN = row["Ledger_name_EN"],
-                        Trans_Type = row["Trans_Type"],
+                        //Trans_Type = row["Trans_Type"],
                         CrDr_id = row["CrDr_id"],
-                        CR_Amount = row["CR_Amount"],
-                        DR_Amount = row["DR_Amount"],
-                        Cash = row["Cash"],
-                        UPI = row["UPI"],
-                        Sale_Final = row["Sale_Final"],
+                        CASH = row["CR_Amount"],
+                        TRANSFER = row["DR_Amount"],
+                        //CR_Amount = row["CR_Amount"],
+                        //DR_Amount = row["DR_Amount"],
+                        //Cash = row["Cash"],
+                        //TRANSFER = row["UPI"],
+                        //Sale_Final = row["Sale_Final"],
                         //Purchase_Cash = row["Purchase_Cash"],
                         //Purchase_UPI = row["Purchase_UPI"]
                     });
@@ -228,134 +231,9 @@ namespace Stock_Backend.Controllers
             }
         }
 
-        // ================= GENERAL =================
-        [Route("api/daybook/general")]
-        [HttpGet]
-        public HttpResponseMessage GetGeneral(DateTime FromDate, int? Outlet_id = null)
-        {
-            try
-            {
-                db.Connect();
+        #endregion OLD_MAIN_DAYBOOK
 
-                string query = @"
-                SELECT 
-                    ISNULL(l.Ledger_id, 0) AS Ledger_id,
-                    ISNULL(l.Ledger_no, 0) AS Ledger_no,
-                    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
-                    td.CrDr_id,
-                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
-                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
-                FROM TRANS t
-                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-                LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
-                WHERE t.Status = 1
-                AND CAST(t.Trans_date AS DATE) = @FromDate";
-
-                if (Outlet_id != null)
-                    query += " AND t.Outlet_id = @Outlet_id";
-
-                query += " GROUP BY ISNULL(l.Ledger_id,0), ISNULL(l.Ledger_no,0), ISNULL(l.Ledger_name_EN,'Sale'), td.CrDr_id";
-
-                SqlCommand cmd = new SqlCommand(query, db.cn);
-                cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
-                if (Outlet_id != null)
-                    cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
-
-                DataTable dt = new DataTable();
-                new SqlDataAdapter(cmd).Fill(dt);
-
-                string sumQuery = @"
-                                        SELECT 
-                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
-                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
-                                        FROM TRANS t
-                                        INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-                                        WHERE t.Status = 1
-                                        AND CAST(t.Trans_date AS DATE) = @FromDate";
-
-                if (Outlet_id != null)
-                    sumQuery += " AND t.Outlet_id = @Outlet_id";
-
-                SqlCommand cmd2 = new SqlCommand(sumQuery, db.cn);
-                cmd2.Parameters.AddWithValue("@FromDate", FromDate.Date);
-                if (Outlet_id != null)
-                    cmd2.Parameters.AddWithValue("@Outlet_id", Outlet_id);
-
-                DataTable dt2 = new DataTable();
-                new SqlDataAdapter(cmd2).Fill(dt2);
-
-                decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
-                decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
-
-                string openingQuery = @"
-                    SELECT 
-                        CAST(t.Trans_date AS DATE) AS Trans_Day,
-                        ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
-                        ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
-                    FROM TRANS t
-                    INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
-                    WHERE t.Status = 1
-                    AND CAST(t.Trans_date AS DATE) < @FromDate";
-
-                if (Outlet_id != null)
-                    openingQuery += " AND t.Outlet_id = @Outlet_id";
-
-                openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
-
-                SqlCommand cmdOpen = new SqlCommand(openingQuery, db.cn);
-                cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
-                if (Outlet_id != null)
-                    cmdOpen.Parameters.AddWithValue("@Outlet_id", Outlet_id);
-
-                DataTable dtOpen = new DataTable();
-                new SqlDataAdapter(cmdOpen).Fill(dtOpen);
-
-                decimal Opening_Balance = 0;
-                foreach (DataRow r in dtOpen.Rows)
-                {
-                    decimal cr = Convert.ToDecimal(r["CR"]);
-                    decimal dr = Convert.ToDecimal(r["DR"]);
-                    Opening_Balance += Math.Abs(cr - dr);
-                }
-
-                decimal Closing_Balance = Opening_Balance + Math.Abs(Today_CR - Today_DR);
-
-                db.Disconnect();
-
-                var list = new List<object>();
-                foreach (DataRow row in dt.Rows)
-                {
-                    list.Add(new
-                    {
-                        Ledger_id = row["Ledger_id"],
-                        Ledger_no = row["Ledger_no"],
-                        Ledger_name_EN = row["Ledger_name_EN"],
-                        CrDr_id = row["CrDr_id"],
-                        CR_Amount = row["CR_Amount"],
-                        DR_Amount = row["DR_Amount"]
-                    });
-                }
-
-                return Request.CreateResponse(HttpStatusCode.OK, new
-                {
-                    List = list,
-                    Summary = new
-                    {
-                        Total_CR = Today_CR,
-                        Total_DR = Today_DR,
-                        Grand_total = Math.Abs(Today_CR - Today_DR),
-                        Opening_Balance = Opening_Balance,
-                        Closing_Balance = Closing_Balance
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
-            }
-        }
-
+        #region OLD_DAYBOOK_DETAILS
         // ================= DETAILS =================
         [Route("api/daybook/details")]
         [HttpGet]
@@ -556,9 +434,9 @@ namespace Stock_Backend.Controllers
                             Customer_name = row["Customer_name"],
                             CR_Amount = row["CR_Amount"],
                             DR_Amount = row["DR_Amount"],
-                            Cash = row["Cash"],
-                            UPI = row["UPI"],
-                            Sale_Final = row["Sale_Final"],
+                            //Cash = row["Cash"],
+                            //UPI = row["UPI"],
+                            //Sale_Final = row["Sale_Final"],
                             //Purchase_Cash = row["Purchase_Cash"],
                             //Purchase_UPI = row["Purchase_UPI"]
                         });
@@ -594,6 +472,220 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
+
+        #endregion OLD_DAYBOOK_DETAILS
+
+        #region GENERAL
+        // ================= GENERAL =================
+        [Route("api/daybook/general")]
+        [HttpGet]
+        public HttpResponseMessage GetGeneral(DateTime FromDate, int? Outlet_id = null)
+        {
+            try
+            {
+                db.Connect();
+
+                string query = @"
+                SELECT 
+                    ISNULL(l.Ledger_id, 0) AS Ledger_id,
+                    ISNULL(l.Ledger_no, 0) AS Ledger_no,
+                    ISNULL(l.Ledger_name_EN, 'Sale') AS Ledger_name_EN,
+                    td.CrDr_id,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END), 0) AS CR_Amount,
+                    ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END), 0) AS DR_Amount
+                FROM TRANS t
+                INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                LEFT JOIN LEDGER l ON td.L_id = l.Ledger_id
+                WHERE t.Status = 1
+                AND CAST(t.Trans_date AS DATE) = @FromDate";
+
+                if (Outlet_id != null)
+                    query += " AND t.Outlet_id = @Outlet_id";
+
+                query += " GROUP BY ISNULL(l.Ledger_id,0), ISNULL(l.Ledger_no,0), ISNULL(l.Ledger_name_EN,'Sale'), td.CrDr_id";
+
+                SqlCommand cmd = new SqlCommand(query, db.cn);
+                cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
+                if (Outlet_id != null)
+                    cmd.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+
+                DataTable dt = new DataTable();
+                new SqlDataAdapter(cmd).Fill(dt);
+
+                string sumQuery = @"
+                                        SELECT 
+                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS Total_CR,
+                                            ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS Total_DR
+                                        FROM TRANS t
+                                        INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                                        WHERE t.Status = 1
+                                        AND CAST(t.Trans_date AS DATE) = @FromDate";
+
+                if (Outlet_id != null)
+                    sumQuery += " AND t.Outlet_id = @Outlet_id";
+
+                SqlCommand cmd2 = new SqlCommand(sumQuery, db.cn);
+                cmd2.Parameters.AddWithValue("@FromDate", FromDate.Date);
+                if (Outlet_id != null)
+                    cmd2.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+
+                DataTable dt2 = new DataTable();
+                new SqlDataAdapter(cmd2).Fill(dt2);
+
+                decimal Today_CR = Convert.ToDecimal(dt2.Rows[0]["Total_CR"]);
+                decimal Today_DR = Convert.ToDecimal(dt2.Rows[0]["Total_DR"]);
+
+                string openingQuery = @"
+                    SELECT 
+                        CAST(t.Trans_date AS DATE) AS Trans_Day,
+                        ISNULL(SUM(CASE WHEN td.CrDr_id = 1 THEN td.Amount ELSE 0 END),0) AS CR,
+                        ISNULL(SUM(CASE WHEN td.CrDr_id = 2 THEN td.Amount ELSE 0 END),0) AS DR
+                    FROM TRANS t
+                    INNER JOIN TRANS_DETAILS td ON t.Trans_id = td.Trans_id
+                    WHERE t.Status = 1
+                    AND CAST(t.Trans_date AS DATE) < @FromDate";
+
+                if (Outlet_id != null)
+                    openingQuery += " AND t.Outlet_id = @Outlet_id";
+
+                openingQuery += " GROUP BY CAST(t.Trans_date AS DATE)";
+
+                SqlCommand cmdOpen = new SqlCommand(openingQuery, db.cn);
+                cmdOpen.Parameters.AddWithValue("@FromDate", FromDate.Date);
+                if (Outlet_id != null)
+                    cmdOpen.Parameters.AddWithValue("@Outlet_id", Outlet_id);
+
+                DataTable dtOpen = new DataTable();
+                new SqlDataAdapter(cmdOpen).Fill(dtOpen);
+
+                decimal Opening_Balance = 0;
+                foreach (DataRow r in dtOpen.Rows)
+                {
+                    decimal cr = Convert.ToDecimal(r["CR"]);
+                    decimal dr = Convert.ToDecimal(r["DR"]);
+                    Opening_Balance += Math.Abs(cr - dr);
+                }
+
+                decimal Closing_Balance = Opening_Balance + Math.Abs(Today_CR - Today_DR);
+
+                db.Disconnect();
+
+                var list = new List<object>();
+                foreach (DataRow row in dt.Rows)
+                {
+                    list.Add(new
+                    {
+                        Ledger_id = row["Ledger_id"],
+                        Ledger_no = row["Ledger_no"],
+                        Ledger_name_EN = row["Ledger_name_EN"],
+                        CrDr_id = row["CrDr_id"],
+                        CR_Amount = row["CR_Amount"],
+                        DR_Amount = row["DR_Amount"]
+                    });
+                }
+
+                return Request.CreateResponse(HttpStatusCode.OK, new
+                {
+                    List = list,
+                    Summary = new
+                    {
+                        Total_CR = Today_CR,
+                        Total_DR = Today_DR,
+                        Grand_total = Math.Abs(Today_CR - Today_DR),
+                        Opening_Balance = Opening_Balance,
+                        Closing_Balance = Closing_Balance
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        #endregion GENERAL
+
+        #region NEW_MAIN_DAYBOOK
+
+        // ================= MAIN =================
+        [Route("api/Daybook/Main_New")]
+        [HttpGet]
+        public HttpResponseMessage GetMainDaybook_New(DateTime FromDate, int? Outlet_id = null, int? Counter_id = null)
+        {
+            try
+            {
+                db.Connect();
+
+                SqlCommand cmd = new SqlCommand("Sp_Main_Daybook", db.cn);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
+                cmd.Parameters.AddWithValue("@Outlet_id", (object)Outlet_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Counter_id", (object)Counter_id ?? DBNull.Value);
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+
+                DataSet ds = new DataSet();
+
+                da.Fill(ds);
+
+                db.Disconnect();
+
+                return Request.CreateResponse(HttpStatusCode.OK, new
+                {
+                    Rows = ds.Tables[0],
+                    Summary = ds.Tables[1].Rows[0],
+                    Balance = ds.Tables[2].Rows[0]
+                });
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+
+        #endregion
+
+        #region NEW_DETAIL_DAYBOOK
+        [HttpGet]
+        [Route("api/daybook/details_new")]
+        public HttpResponseMessage GetDetailDaybook_New(DateTime FromDate, int? Outlet_id = null, int? Counter_id = null)
+        {
+            try
+            {
+                db.Connect();
+
+                SqlCommand cmd = new SqlCommand("Sp_Detail_Daybook", db.cn);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@FromDate", FromDate.Date);
+                cmd.Parameters.AddWithValue("@Outlet_id", (object)Outlet_id ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Counter_id", (object)Counter_id ?? DBNull.Value);
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+
+                DataSet ds = new DataSet();
+
+                da.Fill(ds);
+
+                db.Disconnect();
+
+                return Request.CreateResponse(HttpStatusCode.OK, new
+                {
+                    Rows = ds.Tables[0],
+                    Summary = ds.Tables[1].Rows[0],
+                    Balance = ds.Tables[2].Rows[0]
+                });
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
+        #endregion
     }
 }
 

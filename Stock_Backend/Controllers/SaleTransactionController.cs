@@ -112,33 +112,50 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
-                string query = @"
-        SELECT 
-            s.Sale_id,
-            s.Sale_date,
-            s.Final_amt,
-            s.Narr,
-            d.Details_id,
-            d.Stock_id,
-            d.Quantity,
-            d.MRP,
-            d.Rate,
-            d.Amount
-        FROM SALE s
-        INNER JOIN SALE_DETAILS d 
-            ON s.Sale_id = d.Sale_Rtn_id
-        WHERE s.Sale_id = @Sale_id
-        AND s.Status = 1";
+                // Sale Master
+                string saleQuery = @"
+                                SELECT
+                                    *
+                                FROM SALE
+                                WHERE Sale_id=@Sale_id
+                                AND Status=1";
 
-                SqlCommand cmd = new SqlCommand(query, db.cn);
-                cmd.Parameters.AddWithValue("@Sale_id", Sale_id);
+                // Sale Details
+                string detailQuery = @"
+                                SELECT
+                                    *
+                                FROM SALE_DETAILS
+                                WHERE Sale_Rtn_id=@Sale_id";
 
-                SqlDataAdapter da = new SqlDataAdapter(cmd);
-                DataTable dt = new DataTable();
-                da.Fill(dt);
+                DataTable saleTable = new DataTable();
+                DataTable detailTable = new DataTable();
+
+                using (SqlDataAdapter da = new SqlDataAdapter(saleQuery, db.cn))
+                {
+                    da.SelectCommand.Parameters.AddWithValue("@Sale_id", Sale_id);
+                    da.Fill(saleTable);
+                }
+
+                using (SqlDataAdapter da = new SqlDataAdapter(detailQuery, db.cn))
+                {
+                    da.SelectCommand.Parameters.AddWithValue("@Sale_id", Sale_id);
+                    da.Fill(detailTable);
+                }
 
                 db.Disconnect();
-                return Request.CreateResponse(HttpStatusCode.OK, dt);
+
+                if (saleTable.Rows.Count == 0)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Sale not found.");
+                }
+
+                var result = new
+                {
+                    Sale = saleTable,
+                    SaleDetails = detailTable
+                };
+
+                return Request.CreateResponse(HttpStatusCode.OK, result); ;
             }
             catch (Exception ex)
             {
@@ -258,7 +275,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        //int ledger = 0;
+                        int Transfer_ledger = 0;
 
                         //if (request.CashTrans == 'C')
                         //{
@@ -267,7 +284,7 @@ namespace Stock_Backend.Controllers
                         //        db.cn,
                         //        transaction);
 
-                        //    ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
+                        //    Transfer_ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
                         //}
                         //else if (request.CashTrans == 'T')
                         //{
@@ -276,10 +293,19 @@ namespace Stock_Backend.Controllers
                         //        db.cn,
                         //        transaction);
 
-                        //    ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        //    Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
                         //}
 
-                        //cmd.Parameters.AddWithValue("@Sale_L_id", ledger);
+                        if (request.UPI_AMT > 0)
+                        {
+                            SqlCommand cmdTransfer = new SqlCommand(
+                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='UPI account'",
+                                db.cn,
+                                transaction);
+
+                            Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        }
+
                         cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                 
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
@@ -287,7 +313,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
 
                         cmd.Parameters.AddWithValue("@Roundoff_id", request.Roundoff_id);
-                        cmd.Parameters.AddWithValue("@Transfer_id", 11);
+                        cmd.Parameters.AddWithValue("@Transfer_id", Transfer_ledger);
                         cmd.Parameters.AddWithValue("@Cash_return_id_cr", request.Cash_return_id_cr);
                         cmd.Parameters.AddWithValue("@Cash_return_id_dr", request.Cash_return_id_dr);
 
@@ -445,27 +471,38 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Year_id", request.Year_id);
                         cmd.Parameters.AddWithValue("@Trans_type_id", 2);
                         cmd.Parameters.AddWithValue("@trans_code", request.trans_code);
-                        cmd.Parameters.AddWithValue("@update_trans_id", request.Trans_id);
+                        cmd.Parameters.AddWithValue("@update_trans_id", request.update_trans_id);
                         cmd.Parameters.AddWithValue("@Modify_reason", request.Modify_reason);
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        int ledger = Sale_L_id;
+                        int Transfer_ledger = 0;
 
-                        if (request.CashTrans == 'T')
+                        //if (request.CashTrans == 'T')
+                        //{
+                        //    SqlCommand cmdTransfer = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
+                        //                             db.cn, transaction);
+
+                        //    ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                        //}
+
+                        if (request.UPI_AMT > 0)
                         {
-                            SqlCommand cmdTransfer = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
-                                                     db.cn, transaction);
+                            SqlCommand cmdTransfer = new SqlCommand(
+                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='UPI account'",
+                                db.cn,
+                                transaction);
 
-                            ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
+                            Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
                         }
+
                         cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
                         cmd.Parameters.AddWithValue("@IGST_id", request.IGST_id);
 
                         cmd.Parameters.AddWithValue("@Roundoff_id", request.Roundoff_id);
-                        cmd.Parameters.AddWithValue("@Transfer_id", 11);
+                        cmd.Parameters.AddWithValue("@Transfer_id", Transfer_ledger);
                         cmd.Parameters.AddWithValue("@Cash_return_id_cr", request.Cash_return_id_cr);
                         cmd.Parameters.AddWithValue("@Cash_return_id_dr", request.Cash_return_id_dr);
 
