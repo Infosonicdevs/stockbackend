@@ -184,15 +184,15 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
-                SqlCommand cmdSetting = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose = 'Sale account'", db.cn);
+                SqlCommand cmdSetting = new SqlCommand("SELECT Ledger_id FROM LEDGER_SETTING WHERE Purpose = 'Sale'", db.cn);
                 object saleL = cmdSetting.ExecuteScalar();
                 if (saleL == null || saleL == DBNull.Value)
                 {
                     db.Disconnect();
-                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale account not found in Bazar Setting");
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale account not found in Ledger Setting");
                 }
-                int Sale_L_id = Convert.ToInt32(saleL);
 
+                int Sale_L_id = Convert.ToInt32(saleL);
 
                 if (!db.IsValidUser(request.User))
                 {
@@ -210,6 +210,26 @@ namespace Stock_Backend.Controllers
                 {
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale items required");
+                }
+                
+                int Transfer_ledger = 0;
+
+                if (request.UPI_AMT > 0)
+                {
+                    string query = "SELECT Transfer_Ledger FROM OUTLET WHERE Outlet_id="+ request.Outlet_id;
+                    SqlCommand cmdTransfer = new SqlCommand(query, db.cn);
+
+                    var transfer = cmdTransfer.ExecuteScalar();
+
+                    if (transfer == null || transfer == DBNull.Value)
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Transfer account not found in Ledger Setting");
+                    }
+                    else
+                    {
+                        Transfer_ledger = Convert.ToInt32(transfer);
+                    }
                 }
 
                 int Sale_id = 0;
@@ -258,18 +278,6 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        int Transfer_ledger = 0;
-
-                        if (request.UPI_AMT > 0)
-                        {
-                            SqlCommand cmdTransfer = new SqlCommand(
-                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='UPI account'",
-                                db.cn,
-                                transaction);
-
-                            Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
-                        }
-
                         cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                 
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
@@ -395,6 +403,26 @@ namespace Stock_Backend.Controllers
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Sale items required");
                 }
 
+                int Transfer_ledger = 0;
+
+                if (request.UPI_AMT > 0)
+                {
+                    string query = "SELECT Transfer_Ledger FROM OUTLET WHERE Outlet_id=" + request.Outlet_id;
+                    SqlCommand cmdTransfer = new SqlCommand(query, db.cn);
+
+                    var transfer = cmdTransfer.ExecuteScalar();
+
+                    if (transfer == null || transfer == DBNull.Value)
+                    {
+                        db.Disconnect();
+                        return Request.CreateResponse(HttpStatusCode.BadRequest, "Transfer account not found in Ledger Setting");
+                    }
+                    else
+                    {
+                        Transfer_ledger = Convert.ToInt32(transfer);
+                    }
+                }
+
                 int Sale_id = 0;
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
@@ -444,26 +472,6 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
 
                         // TRANS DETAILS
-                        int Transfer_ledger = 0;
-
-                        //if (request.CashTrans == 'T')
-                        //{
-                        //    SqlCommand cmdTransfer = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
-                        //                             db.cn, transaction);
-
-                        //    ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
-                        //}
-
-                        if (request.UPI_AMT > 0)
-                        {
-                            SqlCommand cmdTransfer = new SqlCommand(
-                                "SELECT L_id FROM Bazar_Settg WHERE Purpose='UPI account'",
-                                db.cn,
-                                transaction);
-
-                            Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
-                        }
-
                         cmd.Parameters.AddWithValue("@Sale_L_id", Sale_L_id);
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
