@@ -22,6 +22,7 @@ namespace Stock_Backend.Models
         public string Modified_by { get; set; }
         public DateTime Modified_date { get;set; }
         public int Is_main_branch { get; set; }  
+        public int Transfer_Ledger { get; set; }  
        
     }
 }

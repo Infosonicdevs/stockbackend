@@ -90,6 +90,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Short_name", outlet.Short_name);
                         cmd.Parameters.AddWithValue("@user", outlet.Created_by);
                         cmd.Parameters.AddWithValue("@Is_main_branch", outlet.Is_main_branch);
+                        cmd.Parameters.AddWithValue("@Transfer_Ledger", outlet.Transfer_Ledger);
                         cmd.Parameters.AddWithValue("@txt", 1);
                         cmd.ExecuteNonQuery();
                         db.Disconnect();
@@ -150,6 +151,7 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Short_name", outlet.Short_name);
                         cmd.Parameters.AddWithValue("@user", outlet.Modified_by);                  
                         cmd.Parameters.AddWithValue("@Is_main_branch", outlet.Is_main_branch);
+                        cmd.Parameters.AddWithValue("@Transfer_Ledger", outlet.Transfer_Ledger);
                         cmd.Parameters.AddWithValue("@txt", 2);
                         cmd.ExecuteNonQuery();
                         db.Disconnect();

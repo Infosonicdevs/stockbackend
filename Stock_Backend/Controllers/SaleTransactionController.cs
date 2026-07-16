@@ -14,6 +14,8 @@ namespace Stock_Backend.Controllers
     {
         DbClass db = new DbClass();
 
+        #region Get StockAvailable
+
         [HttpGet]
         [Route("api/SaleTransaction/StockAvailable")]
         public HttpResponseMessage GetStockAvailable(int Stock_id, int? Outlet_id = null)
@@ -86,6 +88,10 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        #endregion
+
+        #region Get Sale
+
         [Route("api/SaleTransaction")]
         public HttpResponseMessage GetSale()
         {
@@ -102,7 +108,9 @@ namespace Stock_Backend.Controllers
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
         }
+        #endregion
 
+        #region Get Sale By SaleID
 
         [HttpGet]
         [Route("api/SaleTransaction/Details")]
@@ -164,34 +172,9 @@ namespace Stock_Backend.Controllers
             }
         }
 
-        //public List<BazaSetting> GetBazarSetting()
-        //{
-        //    try
-        //    {
-        //        var result = db.GetTable("select * from VIEW_BAZAR_SETTING");
-        //        var list = new List<BazaSetting>();
-        //        foreach (DataRow row in result.Rows)
-        //        {
-        //            list.Add(new BazaSetting
-        //            {
-        //                Pur_id = Convert.ToDecimal(row["Pur_id"]),
-        //                Round_Off_id = Convert.ToDecimal(row["Round_Off_id"]),
-        //                Hamali_id = Convert.ToDecimal(row["Hamali_id"]),
-        //                Commi_id = Convert.ToDecimal(row["Commi_id"]),
-        //                Transport_id = Convert.ToDecimal(row["Transport_id"]),
-        //                Ma_ses_id = Convert.ToDecimal(row["Ma_ses_id"]),
-        //                Tcs_id = Convert.ToDecimal(row["Tcs_id"]),
-        //                Net_Disc_id = Convert.ToDecimal(row["Net_Disc_id"]),
-        //                Transfer_id = Convert.ToDecimal(row["Transfer_id"])
-        //            });
-        //        }
-        //        return list;
-        //    }
-        //    catch
-        //    {
-        //        return new List<BazaSetting>();
-        //    }
-        //}
+        #endregion
+
+        #region Insert Sale
 
         [HttpPost]
         [Route("api/SaleTransaction")]
@@ -276,25 +259,6 @@ namespace Stock_Backend.Controllers
 
                         // TRANS DETAILS
                         int Transfer_ledger = 0;
-
-                        //if (request.CashTrans == 'C')
-                        //{
-                        //    SqlCommand cmdCash = new SqlCommand(
-                        //        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Cash submit'",
-                        //        db.cn,
-                        //        transaction);
-
-                        //    Transfer_ledger = Convert.ToInt32(cmdCash.ExecuteScalar());
-                        //}
-                        //else if (request.CashTrans == 'T')
-                        //{
-                        //    SqlCommand cmdTransfer = new SqlCommand(
-                        //        "SELECT L_id FROM Bazar_Settg WHERE Purpose='Transfer account'",
-                        //        db.cn,
-                        //        transaction);
-
-                        //    Transfer_ledger = Convert.ToInt32(cmdTransfer.ExecuteScalar());
-                        //}
 
                         if (request.UPI_AMT > 0)
                         {
@@ -390,7 +354,11 @@ namespace Stock_Backend.Controllers
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
             }
-        } 
+        }
+        
+        #endregion
+
+        #region Update Sale
 
         [HttpPut]
         [Route("api/SaleTransaction")]
@@ -589,7 +557,9 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        #endregion
 
+        #region Delete Sale
         [HttpPost]
         [Route("api/DeleteSale")]
         public HttpResponseMessage DeleteSale([FromBody] SaleTransactionModel request)
@@ -658,5 +628,6 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        #endregion
     }
 }
