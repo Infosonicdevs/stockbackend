@@ -66,6 +66,10 @@ namespace Stock_Backend.Models
         public string Cheque_Status { get; set; }
         public char? BankOrUdhar { get; set; }
 
+
+        public string Created_by { get; set; }
+        public int Outlet_id { get; set; }
+
         //  DETAILS LIST 
         public List<PurchaseReturnDetail> DETAILS { get; set; } = new List<PurchaseReturnDetail>();
     }
