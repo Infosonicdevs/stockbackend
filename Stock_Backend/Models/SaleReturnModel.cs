@@ -53,6 +53,9 @@ namespace Stock_Backend.Models
         public int? update_trans_id { get; set; }
         public string Modify_reason { get; set; }
 
+        public string Created_by { get; set; }
+        public int Outlet_id { get; set; }
+
         public List<SaleReturnDetails> DETAILS { get; set; }
     }
 

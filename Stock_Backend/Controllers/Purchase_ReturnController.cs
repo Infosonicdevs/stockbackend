@@ -15,13 +15,19 @@ namespace Stock_Backend.Controllers
 
         DbClass db = new DbClass();
 
-        [Route("api/Purchaseretun")]
+        [Route("api/Purchasereturn")]
         public HttpResponseMessage GetSale()
         {
             try
             {
                 db.Connect();
-                var result = db.GetTable("select * from PURCHASE_RETURN where Status = 1 ");
+                var result = db.GetTable(@"SELECT    
+                                            PR.*,
+                                            P.*,
+                                            (SELECT Vend_name FROM VENDOR_INFO WHERE Vend_id = P.Vend_id) AS Vend_name
+                                        FROM PURCHASE_RETURN PR
+                                        LEFT JOIN PURCHASE P ON P.Invoice_id = PR.Invoice_ID
+                                        WHERE PR.Status = 1");
                 db.Disconnect();
                 return Request.CreateResponse(HttpStatusCode.OK, result);
             }
@@ -32,6 +38,30 @@ namespace Stock_Backend.Controllers
             }
         }
 
+        [Route("api/Purchasereturn")]
+        public HttpResponseMessage GetSale(int Invoice_ID)
+        {
+            try
+            {
+                db.Connect();
+                var result = db.GetTable(@"SELECT 
+                                            P.Vend_id,
+                                            (SELECT Vend_name FROM VENDOR_INFO WHERE Vend_id = P.Vend_id) AS Vend_name,
+                                            PR.*,
+                                            PRD.*
+                                        FROM PURCHASE_RETURN PR
+                                        INNER JOIN PURCHASE_RETURN_DETAILS PRD ON PR.Invoice_ID = PRD.Invoice_ID
+                                        LEFT JOIN PURCHASE P ON P.Invoice_id = PR.Invoice_ID
+                                        WHERE PR.Invoice_ID = " + Invoice_ID + " AND PR.Status = 1 ");
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.OK, result);
+            }
+            catch (Exception ex)
+            {
+                db.Disconnect();
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, ex.Message);
+            }
+        }
 
         [Route("api/Purchasereturn")]
         [HttpPost]
@@ -246,6 +276,19 @@ namespace Stock_Backend.Controllers
                     }
                 }
 
+                int Trans_id = 0;
+                // Trans_id fetch from DB
+                var dt = db.GetTable("SELECT TOP 1 Trans_id FROM TRANS_DETAILS WHERE Master_id = " + request.update_return_id);
+                if (dt.Rows.Count > 0)
+                {
+                    Trans_id = Convert.ToInt32(dt.Rows[0]["Trans_id"]);
+                }
+                else
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Trans_id not found");
+                }
+
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
                 {
                     try
@@ -257,7 +300,7 @@ namespace Stock_Backend.Controllers
 
                         // IDS
                         cmd.Parameters.AddWithValue("@update_return_id", request.update_return_id);
-                        cmd.Parameters.AddWithValue("@update_trans_id", request.update_trans_id);
+                        cmd.Parameters.AddWithValue("@update_trans_id", Trans_id);
 
                         //  MAIN
                         cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
@@ -306,7 +349,7 @@ namespace Stock_Backend.Controllers
                         //  DEBUG LOG
                         System.Diagnostics.Debug.WriteLine("TXT: 2");
                         System.Diagnostics.Debug.WriteLine("Return ID: " + request.update_return_id);
-                        System.Diagnostics.Debug.WriteLine("Trans ID: " + request.update_trans_id);
+                        System.Diagnostics.Debug.WriteLine("Trans ID: " + Trans_id);
 
                         cmd.ExecuteNonQuery();
 
@@ -386,7 +429,6 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
-
                 string user = Convert.ToString(data.User);
 
                 if (!db.IsAdmin(user))
@@ -395,10 +437,21 @@ namespace Stock_Backend.Controllers
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Only Admin Can Delete");
                 }
 
-
                 int Return_id = Convert.ToInt32(data.Return_id);
-                int Trans_id = Convert.ToInt32(data.Trans_id);
                 string Reason = Convert.ToString(data.Reason);
+
+                int Trans_id = 0;
+                // Trans_id fetch from DB
+                var dt = db.GetTable("SELECT TOP 1 Trans_id FROM TRANS_DETAILS WHERE Master_id = " + Return_id);
+                if (dt.Rows.Count > 0)
+                {
+                    Trans_id = Convert.ToInt32(dt.Rows[0]["Trans_id"]);
+                }
+                else
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Trans_id not found for this Sale");
+                }
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
                 {

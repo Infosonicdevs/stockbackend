@@ -40,12 +40,30 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
 
-                if (!db.IsValidUser(request.User))
+                if (!db.IsValidUser(request.Created_by))
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid user");
 
                 if (request == null || request.DETAILS.Count == 0)
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid Data");
 
+                SqlCommand cmdSetting = new SqlCommand("SELECT Ledger_id FROM LEDGER_SETTING WHERE Purpose = 'Sale Return'", db.cn);
+                object saleL = cmdSetting.ExecuteScalar();
+                if (saleL == null || saleL == DBNull.Value)
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Purchase Return account not found in Ledger Setting");
+                }
+                int Sale_l_id = Convert.ToInt32(saleL);
+
+                SqlCommand cmdRound = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Round off account'", db.cn);
+                int Round_Off_id = Convert.ToInt32(cmdRound.ExecuteScalar());
+
+                SqlCommand cmdNetDisc = new SqlCommand("SELECT L_id FROM Bazar_Settg WHERE Purpose='Net discount'", db.cn);
+                int Net_Disc_id = Convert.ToInt32(cmdNetDisc.ExecuteScalar());
+                var gst_slab_result = db.GetTable("select top 1 * from VIEW_GST_SLAB order by Id desc");
+                var gst_slab_details_all = db.GetTable("select VIEW_GST_SLAB.CGST_per, VIEW_GST_SLAB.SGST_per, VIEW_GST_SLAB.IGST_per, VIEW_STOCK_DETAILS.Stock_id from VIEW_GST_SLAB left join VIEW_STOCK_DETAILS ON VIEW_GST_SLAB.Id = VIEW_STOCK_DETAILS.Slab_id");
+
+                int Transfer_ledger = 0;
                 int Return_id = 0;
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
@@ -56,6 +74,7 @@ namespace Stock_Backend.Controllers
                         cmd.CommandType = CommandType.StoredProcedure;
 
                         // MAIN
+                        cmd.Parameters.AddWithValue("@Outlet_id", request.Outlet_id);
                         cmd.Parameters.AddWithValue("@Return_date", request.Return_date);
                         cmd.Parameters.AddWithValue("@Sale_id", request.Sale_id);
                         cmd.Parameters.AddWithValue("@Total_quantity", request.Total_quantity);
@@ -64,14 +83,14 @@ namespace Stock_Backend.Controllers
                         cmd.Parameters.AddWithValue("@Round_off", request.Round_off);
                         cmd.Parameters.AddWithValue("@Roundoff_id", request.Roundoff_id);
                         cmd.Parameters.AddWithValue("@Bill_amt", request.Bill_amt);
-                        cmd.Parameters.AddWithValue("@Sale_l_id", request.Sale_l_id);
+                        cmd.Parameters.AddWithValue("@Sale_l_id", Sale_l_id);
 
                         cmd.Parameters.AddWithValue("@Total_CGST", request.Total_CGST);
                         cmd.Parameters.AddWithValue("@Total_SGST", request.Total_SGST);
                         cmd.Parameters.AddWithValue("@Total_IGST", request.Total_IGST);
                         cmd.Parameters.AddWithValue("@Total_Taxable", request.Total_Taxable);
 
-                        cmd.Parameters.AddWithValue("@User", request.User);
+                        cmd.Parameters.AddWithValue("@User", request.Created_by);
                         cmd.Parameters.AddWithValue("@txt", 1);
 
                         // TRANS
@@ -81,11 +100,11 @@ namespace Stock_Backend.Controllers
 
                         // TRANS DETAILS
                         cmd.Parameters.AddWithValue("@CashTrans", request.CashTrans);
-                        cmd.Parameters.AddWithValue("@Status", request.Status);
-                        cmd.Parameters.AddWithValue("@L_id", request.L_id);
+                        cmd.Parameters.AddWithValue("@Status", "1");
+                        cmd.Parameters.AddWithValue("@L_id", Transfer_ledger);
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
                         cmd.Parameters.AddWithValue("@Card_no", request.Card_no ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Narr", request.Narr ?? "Sale Return");
+                        cmd.Parameters.AddWithValue("@Narr", "Sale Return");
 
                         cmd.Parameters.AddWithValue("@CGST_id", request.CGST_id);
                         cmd.Parameters.AddWithValue("@SGST_id", request.SGST_id);
