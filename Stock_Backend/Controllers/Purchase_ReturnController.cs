@@ -149,7 +149,7 @@ namespace Stock_Backend.Controllers
                         // TRANS
                         cmd.Parameters.AddWithValue("@Year_id", request.Year_id);
                         cmd.Parameters.AddWithValue("@Trans_type_id", 3);
-                        cmd.Parameters.AddWithValue("@trans_code", request.trans_code);
+                        cmd.Parameters.AddWithValue("@trans_code", "PR");
 
                         // TRANS DETAILS
                         cmd.Parameters.AddWithValue("@Cust_id", request.Cust_id);
@@ -328,7 +328,7 @@ namespace Stock_Backend.Controllers
                         //  TRANS
                         cmd.Parameters.AddWithValue("@Year_id", request.Year_id);
                         cmd.Parameters.AddWithValue("@Trans_type_id", 3);
-                        cmd.Parameters.AddWithValue("@trans_code", request.trans_code);
+                        cmd.Parameters.AddWithValue("@trans_code", "PR");
                         cmd.Parameters.AddWithValue("@Modify_reason", request.Modify_reason ?? (object)DBNull.Value);
 
                         //  TRANS DETAILS

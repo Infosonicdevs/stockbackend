@@ -11,6 +11,7 @@ namespace Stock_Backend.Models
         public int Sale_id { get; set; }
 
         public decimal Total_quantity { get; set; }
+        public decimal Total { get; set; }
         public decimal Total_Disc { get; set; }
         public decimal Total_amt { get; set; }
         public decimal Round_off { get; set; }
@@ -24,7 +25,7 @@ namespace Stock_Backend.Models
         public decimal Total_IGST { get; set; }
         public decimal Total_Taxable { get; set; }
 
-        public string User { get; set; }
+        public string User { get; set; } 
 
         // TRANS
         public int Year_id { get; set; }
