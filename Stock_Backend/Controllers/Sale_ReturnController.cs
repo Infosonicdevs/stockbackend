@@ -15,7 +15,7 @@ namespace Stock_Backend.Controllers
 
         DbClass db = new DbClass();
 
-        [Route("api/Saleretun")]
+        [Route("api/Salereturn")]
         public HttpResponseMessage GetSale()
         {
             try
@@ -35,7 +35,7 @@ namespace Stock_Backend.Controllers
             }
         }
 
-        [Route("api/Saleretun")]
+        [Route("api/Salereturn")]
         public HttpResponseMessage GetSale(int Sale_Rtn_id)
         {
             try
@@ -369,7 +369,7 @@ namespace Stock_Backend.Controllers
 
                         // DELETE OLD DETAILS
                         SqlCommand cmdDelete = new SqlCommand(
-                            "DELETE FROM Sale_details WHERE Sale_Rtn_id = @Return_id",
+                            "DELETE FROM SALE_RETURN_DETAILS WHERE Return_id = @Return_id",
                             db.cn,
                             transaction
                         );
@@ -439,7 +439,6 @@ namespace Stock_Backend.Controllers
             {
                 db.Connect();
                 int Return_id = request.Return_id;
-                int Trans_id = request.Trans_id;
                 string Reason = request.Reason;
                 string User = request.User;
 
@@ -449,10 +448,23 @@ namespace Stock_Backend.Controllers
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Only Admin Can Delete");
                 }
 
-                if (Return_id == 0 || Trans_id == 0)
+                if (Return_id == 0)
                 {
                     db.Disconnect();
                     return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid IDs");
+                }
+
+                int Trans_id = 0;
+                // Trans_id fetch from DB
+                var dt = db.GetTable("SELECT TOP 1 Trans_id FROM TRANS_DETAILS WHERE Master_id = " + request.Return_id);
+                if (dt.Rows.Count > 0)
+                {
+                    Trans_id = Convert.ToInt32(dt.Rows[0]["Trans_id"]);
+                }
+                else
+                {
+                    db.Disconnect();
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Trans_id not found");
                 }
 
                 using (SqlTransaction transaction = db.cn.BeginTransaction())
